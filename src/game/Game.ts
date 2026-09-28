@@ -27,6 +27,7 @@ import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
+import { HudController } from "./ui/HudController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
 const RECEIVER_BASE_Y = 0.65;
@@ -42,6 +43,7 @@ export class Game {
   private readonly fluid = new FluidSystem();
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
+  private readonly hud = new HudController();
 
   private camera!: ArcRotateCamera;
   private vessel!: FluidCompartment;
@@ -635,75 +637,33 @@ export class Game {
   }
 
   private updateHud(): void {
-    const pressure = document.querySelector<HTMLElement>("#pressure");
-    const risk = document.querySelector<HTMLElement>("#risk");
-    const diameter = document.querySelector<HTMLElement>("#diameter");
-    const toolState = document.querySelector<HTMLElement>("#tool-state");
-    const alignment = document.querySelector<HTMLElement>("#alignment");
-    const flow = document.querySelector<HTMLElement>("#flow");
-    const levelState = document.querySelector<HTMLElement>("#level-state");
-    const sourceFill = document.querySelector<HTMLElement>("#source-fill");
-    const receiverFill = document.querySelector<HTMLElement>("#receiver-fill");
-    const innerHeight = document.querySelector<HTMLElement>("#inner-height");
-    const velocity = document.querySelector<HTMLElement>("#body-velocity");
-    const selectedTarget = document.querySelector<HTMLElement>("#selected-target");
-    const sourceVolume = document.querySelector<HTMLElement>("#source-volume");
-    const hydraulicHead = document.querySelector<HTMLElement>("#hydraulic-head");
-
-    if (pressure) {
-      pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
-    }
-    if (risk) {
-      const stress = this.activeTarget?.stress01 ?? this.maxTargetStress;
-      risk.textContent = this.failed ? "FAILED" : `${Math.round(stress * 100)}%`;
-    }
-    if (diameter) {
-      diameter.textContent = `${(this.selectedDiameter * 1000).toFixed(0)} mm`;
-    }
-    if (toolState) {
-      toolState.textContent = this.failed ? "glass failed" : this.drill.state;
-    }
-    if (alignment) {
-      const value = this.activeTarget ? this.targetAlignment01(this.activeTarget) : 0;
-      alignment.textContent = `${Math.round(value * 100)}%`;
-    }
-    if (flow) {
-      flow.textContent = `${(this.lastOutflowM3 * 60_000_000).toFixed(1)} mL/s`;
-    }
-    if (selectedTarget) {
-      selectedTarget.textContent =
-        this.activeTarget?.definition.label ??
-        (this.hasPrimaryDrain ? "Main drain opened" : "Choose target");
-    }
-    if (levelState) {
-      levelState.textContent =
-        this.levelPhase === "won"
-          ? "Complete — press R to replay"
-          : this.levelPhase === "failed"
-            ? "Glass failed — press R to retry"
-            : this.level.objective;
-    }
-
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const bodyVelocity = this.dynamicBody.body.getLinearVelocity();
-    if (sourceFill) {
-      sourceFill.textContent = `${Math.round(this.fluid.getFillRatio(this.vessel) * 100)}%`;
-    }
-    if (receiverFill) {
-      receiverFill.textContent = `${Math.round(this.receiverFill * 100)}%`;
-    }
-    if (sourceVolume) {
-      sourceVolume.textContent = `${(this.vessel.volumeM3 * 1000).toFixed(2)} L`;
-    }
-    if (hydraulicHead) {
-      hydraulicHead.textContent = `${this.hydraulicHeadMeters.toFixed(2)} m`;
-    }
-    if (innerHeight) {
-      innerHeight.textContent = `${bodyPosition.y.toFixed(2)} m`;
-    }
-    if (velocity) {
-      velocity.textContent = `${bodyVelocity.length().toFixed(2)} m/s`;
-    }
+    const activeStress = this.activeTarget?.stress01 ?? this.maxTargetStress;
+    const alignment = this.activeTarget
+      ? this.targetAlignment01(this.activeTarget)
+      : 0;
+
+    this.hud.render({
+      levelPhase: this.levelPhase,
+      objective: this.level.objective,
+      failed: this.failed,
+      pressurePa: this.lastPressurePa,
+      crackRisk01: activeStress,
+      diameterMeters: this.selectedDiameter,
+      toolState: this.drill.state,
+      alignment01: alignment,
+      flowM3: this.lastOutflowM3,
+      selectedTargetLabel:
+        this.activeTarget?.definition.label ??
+        (this.hasPrimaryDrain ? "Main drain opened" : "Choose target"),
+      sourceFill01: this.fluid.getFillRatio(this.vessel),
+      receiverFill01: this.receiverFill,
+      sourceVolumeM3: this.vessel.volumeM3,
+      hydraulicHeadMeters: this.hydraulicHeadMeters,
+      innerHeightScene: bodyPosition.y,
+      bodySpeedScenePerSecond: bodyVelocity.length(),
+    });
   }
 
   private targetAlignment01(target: DrillTargetRuntime): number {
