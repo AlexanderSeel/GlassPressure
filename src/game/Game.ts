@@ -839,6 +839,7 @@ export class Game {
         ),
       );
     }
+    this.buildLeakVisuals();
   }
 
   private updateHostMotion(dt: number): void {
@@ -879,8 +880,7 @@ export class Game {
       target.reset();
     }
 
-    this.jetVisual.reset();
-    this.flowVisuals.reset();
+    for (const visual of this.leakVisuals.values()) visual.reset();
     this.overflowVisuals.reset();
     this.breakVisuals.clear();
 
