@@ -503,13 +503,7 @@ export class Game {
       this.waterSurfaceForBody(this.nestedVessel.position),
     );
     this.applyReceiverCurrent(dt, transferredM3);
-    const jetOutflowM3 =
-      this.latestOpenedTarget?.definition.effect === "nested-drain"
-        ? nestedOutflowM3
-        : result.outflowM3;
-    this.applyJetForce(jetOutflowM3);
-    this.updateJetVisual(jetOutflowM3, dt);
-    this.updateFlowVisuals(jetOutflowM3, dt);
+    this.updateOpenHoleFlows(result.holeOutflowsM3, dt);
     this.updateOverflowVisuals(result.overflowM3, dt);
     this.breakVisuals.update(dt);
     this.updateWaterVisuals(dt, transferredM3);
@@ -572,11 +566,12 @@ export class Game {
       if (target.progress01 >= 1) {
         const diameter = this.selectedDiameter * target.definition.holeDiameterScale;
         if (target.definition.effect === "nested-drain") {
-          this.nestedVessel.addDrain(
+          target.fluidHoleIndex = this.nestedVessel.addDrain(
             diameter,
             target.definition.holeElevationMeters,
           );
         } else {
+          target.fluidHoleIndex = this.vessel.holes.length;
           this.fluid.addHole(
             this.vessel,
             diameter,
@@ -584,7 +579,6 @@ export class Game {
           );
         }
         target.holeCreated = true;
-        this.latestOpenedTarget = target;
         this.targetLocked = false;
         this.activeTarget = null;
         this.drill.notifyBreakthrough();
@@ -850,7 +844,6 @@ export class Game {
     this.diameterIndex = 1;
     this.targetLocked = false;
     this.activeTarget = null;
-    this.latestOpenedTarget = null;
     this.failed = false;
     this.runtime.reset();
     this.lastPressurePa = 0;
