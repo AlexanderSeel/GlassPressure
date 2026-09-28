@@ -414,10 +414,16 @@ export class Game {
     const pressure = document.querySelector<HTMLElement>("#pressure");
     const risk = document.querySelector<HTMLElement>("#risk");
     const diameter = document.querySelector<HTMLElement>("#diameter");
+    const toolState = document.querySelector<HTMLElement>("#tool-state");
+    const alignment = document.querySelector<HTMLElement>("#alignment");
+    const flow = document.querySelector<HTMLElement>("#flow");
 
     if (pressure) pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
     if (risk) risk.textContent = `${Math.round(this.crackRisk * 100)}%`;
     if (diameter) diameter.textContent = `${(this.selectedDiameter * 1000).toFixed(0)} mm`;
+    if (toolState) toolState.textContent = this.failed ? "glass failed" : this.drill.state;
+    if (alignment) alignment.textContent = `${Math.round(this.drillAlignment01 * 100)}%`;
+    if (flow) flow.textContent = `${(this.lastOutflowM3 * 60_000_000).toFixed(1)} mL/s`;
   }
 
   private get selectedDiameter(): number {

@@ -143,17 +143,17 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [x] visible drill model with approach/contact/drill/breakthrough/retract states\n- [ ] surface-normal alignment and physical contact validation
 - [x] fixed-step accumulator independent of render FPS
 - [x] submerged-volume buoyancy for the first dynamic sphere
-- [ ] crack visualization and failure
+- [x] crack visualization and catastrophic failure
 - [ ] multi-step objective completion
 - [ ] reset/retry flow
 - [ ] visual polish pass
 
 ### M2 — Robust drilling & glass
 - [ ] raycast surface position/normal
-- [ ] moving target zones attached to vessels
-- [ ] steadiness/alignment metrics
-- [ ] local stress map
-- [ ] crack rendering
+- [x] target zones attached to vessel transforms
+- [x] steadiness/alignment metrics
+- [x] local target stress model
+- [x] crack rendering
 - [ ] authored breakable regions
 - [ ] protected-object failure rules
 - [ ] drill audio/haptics hooks
