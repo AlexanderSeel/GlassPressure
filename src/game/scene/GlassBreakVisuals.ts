@@ -12,6 +12,8 @@ import {
 type Fragment = {
   mesh: Mesh;
   aggregate: PhysicsAggregate;
+  ageSeconds: number;
+  lifetimeSeconds: number;
 };
 
 export class GlassBreakVisuals {
@@ -31,8 +33,6 @@ export class GlassBreakVisuals {
   }
 
   public spawn(origin: Vector3, surfaceNormal: Vector3): void {
-    this.clear();
-
     const normal = surfaceNormal.lengthSquared() > 0.001
       ? surfaceNormal.normalize()
       : new Vector3(0, 0, -1);
@@ -42,7 +42,15 @@ export class GlassBreakVisuals {
     tangent.normalize();
     const bitangent = Vector3.Cross(normal, tangent).normalize();
 
-    for (let i = 0; i < this.fragmentBudget; i += 1) {
+    const fragmentsThisBreak = Math.max(
+      2,
+      Math.min(this.fragmentBudget, Math.ceil(this.fragmentBudget * 0.6)),
+    );
+
+    for (let i = 0; i < fragmentsThisBreak; i += 1) {
+      while (this.fragments.length >= this.fragmentBudget) {
+        this.disposeFragment(this.fragments.shift()!);
+      }
       const phase = i * 2.399963229728653;
       const width = 0.075 + (i % 3) * 0.026;
       const height = 0.1 + (i % 4) * 0.024;
@@ -90,15 +98,41 @@ export class GlassBreakVisuals {
         .add(Vector3.Up().scale(0.012 + (i % 3) * 0.004));
 
       aggregate.body.applyImpulse(impulse, mesh.getAbsolutePosition());
-      this.fragments.push({ mesh, aggregate });
+      this.fragments.push({
+        mesh,
+        aggregate,
+        ageSeconds: 0,
+        lifetimeSeconds: 1.9 + (i % 4) * 0.32,
+      });
+    }
+  }
+
+  public update(dtSeconds: number): void {
+    const dt = Math.max(0, Math.min(dtSeconds, 0.05));
+
+    for (let i = this.fragments.length - 1; i >= 0; i -= 1) {
+      const fragment = this.fragments[i]!;
+      fragment.ageSeconds += dt;
+
+      if (
+        fragment.ageSeconds >= fragment.lifetimeSeconds ||
+        fragment.mesh.getAbsolutePosition().y < -4
+      ) {
+        this.disposeFragment(fragment);
+        this.fragments.splice(i, 1);
+      }
     }
   }
 
   public clear(): void {
     for (const fragment of this.fragments) {
-      fragment.aggregate.dispose();
-      fragment.mesh.dispose();
+      this.disposeFragment(fragment);
     }
     this.fragments.length = 0;
+  }
+
+  private disposeFragment(fragment: Fragment): void {
+    fragment.aggregate.dispose();
+    fragment.mesh.dispose();
   }
 }

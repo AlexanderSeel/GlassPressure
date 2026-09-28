@@ -462,6 +462,7 @@ export class Game {
     this.applyJetForce(jetOutflowM3);
     this.updateJetVisual(jetOutflowM3, dt);
     this.updateFlowVisuals(jetOutflowM3, dt);
+    this.breakVisuals.update(dt);
     this.updateWaterVisuals();
 
     this.runtime.evaluate({
