@@ -135,6 +135,13 @@ export class DrillTargetRuntime {
     return Math.min(1, Math.max(0, Vector3.Dot(approach, normal.scale(-1))));
   }
 
+  public outletNormal(): Vector3 {
+    const targetPosition = this.marker.getAbsolutePosition();
+    const fallback = targetPosition.subtract(this.host.getAbsolutePosition());
+    if (fallback.lengthSquared() > 0.0001) return fallback.normalize();
+    return new Vector3(0, 0, -1);
+  }
+
   public surfaceNormal(cameraPosition: Vector3): Vector3 {
     const targetPosition = this.marker.getAbsolutePosition();
     const toTarget = targetPosition.subtract(cameraPosition);

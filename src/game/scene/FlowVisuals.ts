@@ -90,6 +90,12 @@ export class FlowVisuals {
     for (const particle of this.particles) particle.mesh.setEnabled(false);
   }
 
+  public dispose(): void {
+    for (const particle of this.particles) particle.mesh.dispose();
+    this.prototype.material?.dispose();
+    this.prototype.dispose();
+  }
+
   private spawn(origin: Vector3, direction: Vector3, flowMlPerSecond: number): boolean {
     const particle = this.particles.find(candidate => !candidate.mesh.isEnabled());
     if (!particle) return false;

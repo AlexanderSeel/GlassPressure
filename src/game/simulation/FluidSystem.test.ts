@@ -40,6 +40,25 @@ describe("FluidSystem", () => {
     expect(large.volumeM3).toBeLessThan(small.volumeM3);
   });
 
+  it("keeps independent flow values for multiple open holes", () => {
+    const model = vessel();
+    const system = new FluidSystem();
+    system.addHole(model, 0.004, 0.05);
+    system.addHole(model, 0.01, 0.05);
+
+    const result = system.step(model, 0.05);
+
+    expect(result.holeOutflowsM3).toHaveLength(2);
+    expect(result.holeOutflowsM3[0]).toBeGreaterThan(0);
+    expect(result.holeOutflowsM3[1]).toBeGreaterThan(0);
+    expect(
+      result.holeOutflowsM3[0]! + result.holeOutflowsM3[1]!,
+    ).toBeCloseTo(result.outflowM3, 12);
+    expect(result.holeOutflowsM3[1]).toBeGreaterThan(
+      result.holeOutflowsM3[0]!,
+    );
+  });
+
   it("reports overflow instead of deleting excess inlet water", () => {
     const model = vessel();
     model.volumeM3 = 0.0099;

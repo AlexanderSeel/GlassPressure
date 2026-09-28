@@ -103,6 +103,11 @@ export class JetStreamVisual {
     this.splash.scaling.setAll(1);
   }
 
+  public dispose(): void {
+    this.stream.dispose();
+    this.splash.dispose();
+  }
+
   private hide(): void {
     this.stream.visibility = 0;
     this.splash.visibility = 0;

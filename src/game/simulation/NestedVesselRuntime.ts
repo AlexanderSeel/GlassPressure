@@ -27,6 +27,7 @@ export class NestedVesselRuntime {
   private definition: NestedVesselDefinition | null = null;
   private compartment: FluidCompartment | null = null;
   private lastPressurePa = 0;
+  private lastHoleOutflowsM3: number[] = [];
 
   public constructor(
     private readonly scene: Scene,
@@ -106,6 +107,7 @@ export class NestedVesselRuntime {
     if (!this.definition) {
       this.compartment = null;
       this.lastPressurePa = 0;
+      this.lastHoleOutflowsM3 = [];
       this.mesh.visibility = 0;
       this.visualShell.visibility = 0;
       this.rim.visibility = 0;
@@ -141,13 +143,16 @@ export class NestedVesselRuntime {
     if (!this.compartment) return 0;
     const result = this.fluid.step(this.compartment, dtSeconds);
     this.lastPressurePa = result.pressurePa;
+    this.lastHoleOutflowsM3 = result.holeOutflowsM3;
     this.updateFluidVisual();
     return result.outflowM3;
   }
 
-  public addDrain(diameterMeters: number, elevationMeters: number): void {
-    if (!this.compartment) return;
+  public addDrain(diameterMeters: number, elevationMeters: number): number {
+    if (!this.compartment) return -1;
+    const index = this.compartment.holes.length;
     this.fluid.addHole(this.compartment, diameterMeters, elevationMeters);
+    return index;
   }
 
   public applyHydrodynamics(waterSurfaceY: number): void {
@@ -214,6 +219,11 @@ export class NestedVesselRuntime {
 
   public get pressurePa(): number {
     return this.lastPressurePa;
+  }
+
+  public holeOutflowM3(index: number | null): number {
+    if (index === null || index < 0) return 0;
+    return this.lastHoleOutflowsM3[index] ?? 0;
   }
 
   public get linearVelocity(): Vector3 {

@@ -16,6 +16,7 @@ export type FluidCompartment = {
 
 export type FluidStepResult = {
   outflowM3: number;
+  holeOutflowsM3: number[];
   overflowM3: number;
   inletM3: number;
   pressurePa: number;
@@ -38,23 +39,31 @@ export class FluidSystem {
     const rho = compartment.densityKgM3;
     const pressurePa = rho * GRAVITY * liquidHeight;
 
-    let outflowRate = 0;
-    for (const hole of compartment.holes) {
+    const requestedHoleOutflowsM3 = compartment.holes.map(hole => {
       const head = Math.max(0, liquidHeight - hole.elevationMeters);
-      if (head <= 0) continue;
+      if (head <= 0) return 0;
 
       const radius = hole.diameterMeters / 2;
       const area = Math.PI * radius * radius;
-      outflowRate +=
+      const rate =
         hole.dischargeCoefficient *
         area *
         Math.sqrt(2 * GRAVITY * head);
-    }
+      return rate * safeDt;
+    });
 
+    const requestedOutflow = requestedHoleOutflowsM3.reduce(
+      (sum, value) => sum + value,
+      0,
+    );
     const inletM3 = compartment.inletM3PerSecond * safeDt;
-    const requestedOutflow = outflowRate * safeDt;
     const available = Math.max(0, compartment.volumeM3 + inletM3);
     const actualOutflow = Math.min(requestedOutflow, available);
+    const scale =
+      requestedOutflow > 0 ? actualOutflow / requestedOutflow : 0;
+    const holeOutflowsM3 = requestedHoleOutflowsM3.map(
+      value => value * scale,
+    );
     const afterOutflow = Math.max(0, available - actualOutflow);
     const overflowM3 = Math.max(0, afterOutflow - compartment.capacityM3);
 
@@ -65,6 +74,7 @@ export class FluidSystem {
 
     return {
       outflowM3: actualOutflow,
+      holeOutflowsM3,
       overflowM3,
       inletM3,
       pressurePa,
