@@ -633,47 +633,67 @@ export class Game {
     }
   }
 
-  private applyJetForce(outflowM3: number): void {
-    if (!this.latestOpenedTarget || outflowM3 <= 0) return;
+  private updateOpenHoleFlows(
+    sourceHoleOutflowsM3: readonly number[],
+    dt: number,
+  ): void {
+    for (const target of this.targets) {
+      const visual = this.leakVisuals.get(target.definition.id);
+      if (!visual) continue;
 
-    const direction = this.targetSurfaceNormal(this.latestOpenedTarget);
-    if (this.latestOpenedTarget.definition.effect === "nested-drain") {
-      this.nestedVessel.applyJetReaction(direction, outflowM3);
-      return;
+      if (!target.holeCreated || target.fluidHoleIndex === null) {
+        visual.hide(dt);
+        continue;
+      }
+
+      const outflowM3 =
+        target.definition.effect === "nested-drain"
+          ? this.nestedVessel.holeOutflowM3(target.fluidHoleIndex)
+          : sourceHoleOutflowsM3[target.fluidHoleIndex] ?? 0;
+
+      if (outflowM3 <= 0) {
+        visual.hide(dt);
+        continue;
+      }
+
+      const origin = target.marker.getAbsolutePosition();
+      const direction = target.outletNormal();
+      visual.update(
+        dt,
+        outflowM3,
+        origin,
+        direction,
+        this.waterSurfaceForBody(origin),
+      );
+
+      if (target.definition.effect === "nested-drain") {
+        this.nestedVessel.applyJetReaction(direction, outflowM3);
+      }
     }
-
-    const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
-    const jet = Math.min(1.35, outflowM3 * 420000);
-    this.dynamicBody.body.applyForce(
-      direction.scale(jet).add(new Vector3(0, jet * 0.08, 0)),
-      bodyPosition,
-    );
   }
 
-  private updateJetVisual(outflowM3: number, dt: number): void {
-    const target = this.latestOpenedTarget;
-    this.jetVisual.update(
-      dt,
-      outflowM3,
-      target?.marker.getAbsolutePosition() ?? null,
-      target ? this.targetSurfaceNormal(target) : null,
-      this.receiverWaterSurfaceY,
-    );
-  }
+  private buildLeakVisuals(): void {
+    for (const visual of this.leakVisuals.values()) visual.dispose();
+    this.leakVisuals.clear();
 
-  private updateFlowVisuals(outflowM3: number, dt: number): void {
-    const target = this.latestOpenedTarget;
-    if (!target || outflowM3 <= 0) {
-      this.flowVisuals.update(dt, 0, null, null);
-      return;
+    const perTargetBudget = Math.max(
+      5,
+      Math.floor(
+        this.quality.flowParticlePoolSize /
+          Math.max(1, this.level.targets.length),
+      ),
+    );
+
+    for (const target of this.targets) {
+      this.leakVisuals.set(
+        target.definition.id,
+        new TargetLeakVisual(
+          this.scene,
+          this.waterMaterial,
+          perTargetBudget,
+        ),
+      );
     }
-
-    this.flowVisuals.update(
-      dt,
-      outflowM3,
-      target.marker.getAbsolutePosition(),
-      this.targetSurfaceNormal(target),
-    );
   }
 
   private updateOverflowVisuals(
