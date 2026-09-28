@@ -17,7 +17,7 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import { LEVELS, type LevelDefinition } from "./level/LevelDefinition";
-import { evaluateLevel, type LevelPhase } from "./level/LevelState";
+import { LevelRuntime } from "./level/LevelRuntime";
 import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
@@ -42,9 +42,7 @@ const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
 export class Game {
   private readonly engine: Engine;
   private readonly scene: Scene;
-  private levelIndex = 0;
-  private level: LevelDefinition = LEVELS[0]!;
-  private levelElapsedSeconds = 0;
+  private readonly runtime = new LevelRuntime(LEVELS);
   private readonly targetHostBasePosition = new Vector3(0, 3.65, 0);
   private readonly fluid = new FluidSystem();
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
@@ -71,14 +69,13 @@ export class Game {
   private activeTarget: DrillTargetRuntime | null = null;
   private latestOpenedTarget: DrillTargetRuntime | null = null;
 
-  private receiverVolumeM3 = this.level.initialReceiverVolumeM3;
+  private receiverVolumeM3 = this.runtime.level.initialReceiverVolumeM3;
   private diameterIndex = 1;
   private targetLocked = false;
   private lastPressurePa = 0;
   private lastOutflowM3 = 0;
   private pointerMotion = 0;
   private failed = false;
-  private levelPhase: LevelPhase = "playing";
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, {
@@ -371,7 +368,7 @@ export class Game {
 
   private bindInput(): void {
     this.canvas.addEventListener("pointerdown", event => {
-      if (event.button !== 0 || this.failed || this.levelPhase !== "playing") return;
+      if (event.button !== 0 || this.failed || this.runtime.phase !== "playing") return;
 
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       const target = this.targets.find(runtime => runtime.marker === pick?.pickedMesh);
@@ -439,19 +436,14 @@ export class Game {
     this.updateFlowVisuals(result.outflowM3, dt);
     this.updateWaterVisuals();
 
-    if (this.levelPhase === "playing") {
-      this.levelPhase = evaluateLevel(
-        {
-          glassFailed: this.failed,
-          holeCreated: this.hasPrimaryDrain,
-          sourceFill01: this.fluid.getFillRatio(this.vessel),
-          receiverFill01: this.receiverFill,
-          innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
-          innerXScene: this.dynamicBody.transformNode.getAbsolutePosition().x,
-        },
-        this.level.goal,
-      );
-    }
+    this.runtime.evaluate({
+      glassFailed: this.failed,
+      holeCreated: this.hasPrimaryDrain,
+      sourceFill01: this.fluid.getFillRatio(this.vessel),
+      receiverFill01: this.receiverFill,
+      innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
+      innerXScene: this.dynamicBody.transformNode.getAbsolutePosition().x,
+    });
   }
 
   private simulateActiveTarget(
@@ -591,8 +583,7 @@ export class Game {
   }
 
   private nextLevel(): void {
-    this.levelIndex = (this.levelIndex + 1) % LEVELS.length;
-    this.level = LEVELS[this.levelIndex] ?? LEVELS[0]!;
+    this.runtime.next();
     this.rebuildTargets();
     this.resetLevel();
   }
@@ -608,23 +599,10 @@ export class Game {
   }
 
   private updateHostMotion(dt: number): void {
-    this.levelElapsedSeconds += dt;
-    const motion = this.level.hostMotion;
-    if (!motion) {
-      this.targetHost.position.copyFrom(this.targetHostBasePosition);
-      return;
-    }
-
-    const angle =
-      this.levelElapsedSeconds * Math.PI * 2 * motion.frequencyHz +
-      motion.phaseRadians;
-    const verticalAngle = angle * 1.37 + motion.phaseRadians * 0.5;
-
+    const offset = this.runtime.advance(dt);
     this.targetHost.position.copyFromFloats(
-      this.targetHostBasePosition.x +
-        Math.sin(angle) * motion.lateralAmplitudeScene,
-      this.targetHostBasePosition.y +
-        Math.sin(verticalAngle) * motion.verticalAmplitudeScene,
+      this.targetHostBasePosition.x + offset.x,
+      this.targetHostBasePosition.y + offset.y,
       this.targetHostBasePosition.z,
     );
   }
@@ -643,11 +621,10 @@ export class Game {
     this.activeTarget = null;
     this.latestOpenedTarget = null;
     this.failed = false;
-    this.levelPhase = "playing";
+    this.runtime.reset();
     this.lastPressurePa = 0;
     this.lastOutflowM3 = 0;
     this.pointerMotion = 0;
-    this.levelElapsedSeconds = 0;
     this.targetHost.position.copyFrom(this.targetHostBasePosition);
 
     for (const target of this.targets) {
@@ -673,7 +650,7 @@ export class Game {
 
   private failGlass(target: DrillTargetRuntime): void {
     this.failed = true;
-    this.levelPhase = "failed";
+    this.runtime.fail();
     this.targetLocked = false;
     this.activeTarget = target;
     this.drill.release();
@@ -711,7 +688,7 @@ export class Game {
       : 0;
 
     this.hud.render({
-      levelPhase: this.levelPhase,
+      levelPhase: this.runtime.phase,
       objective: this.level.objective,
       failed: this.failed,
       pressurePa: this.lastPressurePa,
@@ -740,6 +717,10 @@ export class Game {
 
   private targetSurfaceNormal(target: DrillTargetRuntime): Vector3 {
     return target.surfaceNormal(this.camera.position);
+  }
+
+  private get level(): LevelDefinition {
+    return this.runtime.level;
   }
 
   private get drillSteadiness01(): number {
