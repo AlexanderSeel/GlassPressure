@@ -173,14 +173,14 @@ The first level is now data-driven. It has two drillable regions:
 - **Main drain** — larger effective opening, lower on the vessel, best for moving significant water.
 - **Pressure relief** — smaller high opening that can reduce pressure with lower transferred volume, giving the player a safer preparatory option before drilling the main outlet.
 
-Both openings can coexist, so target order starts to matter. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
+Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
 The water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering.
 
 ## Next implementation batch
-1. Make the pressure-relief target materially reduce later drilling stress on the main target.
-2. Add source volume and hydraulic head to telemetry.
-3. Add splash/bubble particles driven strictly from simulated flow.
-4. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
-5. Add the second handcrafted level with a moving/rotating vessel.
-6. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
+1. Add splash/bubble particles driven strictly from simulated flow.
+2. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
+3. Add the second handcrafted level with a moving/rotating vessel.
+4. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
+5. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
+6. Add a first authored break region with bounded glass fragments.

@@ -23,6 +23,7 @@ import {
   type DrillTargetDefinition,
 } from "./level/LevelDefinition";
 import { evaluateLevel, type LevelPhase } from "./level/LevelState";
+import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
@@ -509,7 +510,11 @@ export class Game {
         alignment01: alignment,
         steadiness01: steadiness,
         diameterMeters: this.selectedDiameter,
-        localPressurePa: pressurePa,
+        localPressurePa: effectiveTargetPressurePa(
+          pressurePa,
+          target.definition.effect,
+          this.pressureReliefOpen,
+        ),
         wallThicknessMeters: target.definition.wallThicknessMeters,
         nearbyDamage01: Math.max(0, target.stress01 - 0.55),
       },
@@ -527,7 +532,11 @@ export class Game {
 
     if (this.drill.isDrilling) {
       const efficiency = drillingEfficiency(alignment, steadiness);
-      target.progress01 += dt * 0.42 * efficiency;
+      target.progress01 +=
+        dt *
+        0.42 *
+        efficiency *
+        targetProgressMultiplier(target.definition.effect, this.pressureReliefOpen);
 
       if (target.progress01 >= 1) {
         const diameter = this.selectedDiameter * target.definition.holeDiameterScale;
@@ -729,6 +738,8 @@ export class Game {
     const innerHeight = document.querySelector<HTMLElement>("#inner-height");
     const velocity = document.querySelector<HTMLElement>("#body-velocity");
     const selectedTarget = document.querySelector<HTMLElement>("#selected-target");
+    const sourceVolume = document.querySelector<HTMLElement>("#source-volume");
+    const hydraulicHead = document.querySelector<HTMLElement>("#hydraulic-head");
 
     if (pressure) {
       pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
@@ -771,6 +782,12 @@ export class Game {
     }
     if (receiverFill) {
       receiverFill.textContent = `${Math.round(this.receiverFill * 100)}%`;
+    }
+    if (sourceVolume) {
+      sourceVolume.textContent = `${(this.vessel.volumeM3 * 1000).toFixed(2)} L`;
+    }
+    if (hydraulicHead) {
+      hydraulicHead.textContent = `${this.hydraulicHeadMeters.toFixed(2)} m`;
     }
     if (innerHeight) {
       innerHeight.textContent = `${bodyPosition.y.toFixed(2)} m`;
@@ -828,6 +845,19 @@ export class Game {
 
   private get receiverWaterSurfaceY(): number {
     return RECEIVER_BASE_Y + this.receiverFill * RECEIVER_WATER_HEIGHT_SCENE;
+  }
+
+  private get pressureReliefOpen(): boolean {
+    return this.targets.some(
+      target =>
+        target.definition.effect === "pressure-relief" &&
+        target.holeCreated,
+    );
+  }
+
+  private get hydraulicHeadMeters(): number {
+    const density = Math.max(1, this.vessel.densityKgM3);
+    return this.lastPressurePa / (density * 9.81);
   }
 
   private get hasPrimaryDrain(): boolean {
