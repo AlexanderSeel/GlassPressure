@@ -216,6 +216,8 @@ Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves
 
 Current interaction usability: the thin torus is no longer the only pickable geometry. Each target now has a full circular hit patch, hover feedback/cursor change, an in-world radial progress fill and a HUD progress bar/percentage so the player can see drilling progress immediately.
 
+Level 1 testability: after the nested vessel is drilled/lightened, a bounded outward/upward wash-out force now guarantees a physical path over the parent rim instead of relying on random drift. In Vite development mode only, `T` advances useful Level 1 checkpoints (high fill -> nested target height -> near-rim state) so interaction/physics can be tested quickly without waiting through the entire fill sequence.
+
 ## Next implementation batch
 1. [x] Rebuild Level 1 around one tall chamber + open parent cup + nested physical bodies.
 2. [x] Add parent-cup Havok floor/wall collision so nested bodies can rise inside it and clear the rim.
