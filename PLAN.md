@@ -31,7 +31,7 @@ Architecture:
 - Havok Physics V2 for rigid bodies
 - deterministic compartment/flow model for gameplay liquid
 - mesh/particle representation for visual liquid
-- Vitest for simulation tests
+- Vitest for deterministic simulation tests
 - HTML/CSS HUD initially
 
 ## Design pillars
@@ -44,78 +44,32 @@ Architecture:
 7. Web-first performance; touch/mobile considered from the start.
 
 ## Core simulation
-
 ### Rigid bodies
-Havok handles body transforms, collisions, gravity, constraints, dynamic nested vessels, bounded fragments and tool collision proxies.
+Havok handles transforms, collisions, gravity, constraints, dynamic vessels and bounded debris.
 
 ### Fluid gameplay
-Liquid logic is numerical, not particle-driven.
-
-A compartment owns capacity, volume, fill height, density, inlets/outlets, holes, overflow connections, pressure/head and a pose/reference geometry.
+Liquid logic is numerical and authoritative. Visual water follows the simulation.
 
 Initial outflow:
 `Q = Cd * A * sqrt(2 * g * h)`
 
-Hole diameter must materially change the result.
-
 ### Buoyancy
-Target model:
 `Fb = rho * g * Vsubmerged`
 
-Also model fluid drag, angular damping, contained-water mass, center-of-mass shift where useful and bounded jet impulses.
-
-### Holes
-A gameplay hole stores local/world position, normal, diameter, effective area, tool, edge quality, flow coefficient, stress contribution and target-zone validity.
-
-Small holes equalize slowly. Large holes drain faster and form stronger jets while raising fracture risk.
+The current sphere prototype uses submerged-volume buoyancy plus drag.
 
 ### Glass stress
-Progressive strategy:
-1. deterministic local stress model;
-2. procedural crack visualization;
-3. authored/pre-fractured break regions;
-4. runtime fracture experiments only after the core loop is stable.
+Stress responds to drilling duration, angle, pointer steadiness, diameter, pressure, wall thickness and accumulated local damage.
 
 ## Tool progression
-Architecture must support:
-- micro diamond drill;
-- high-speed drill;
-- laser drill;
-- spring punch;
-- glass cutter;
-- controlled impact hammer;
-- thermal tool.
-
-## Level rules
-Per-level combinations can define success/failure:
-- free selected nested objects;
-- drain below a threshold;
-- route water into a collector;
-- wash an object out;
-- preserve protected objects;
-- use a limited hole count;
-- stay below crack risk;
-- avoid overflow;
-- finish before a pressure/time condition;
-- hit target zones in any viable sequence.
-
-Harder levels can expose multiple targets where the obvious first choice is not necessarily optimal.
-
-## Content progression
-Early: simple bowls/cylinders, large targets, slow inlet, stable bodies.
-Mid: tilting vessels, multiple compartments, protected glass, useful jets, alternate drill orders.
-Late: spirals, double chambers, rotating rings, suspended glass, asymmetrical buoyancy, multiple inlets and tight timing.
-
-## Procedural mode
-Generate constrained puzzle graphs, never arbitrary impossible geometry:
-1. choose environment;
-2. choose vessel graph;
-3. establish containment/connectivity;
-4. choose dynamic bodies;
-5. choose target regions;
-6. run candidate simulation;
-7. reject unstable/unsolvable candidates;
-8. estimate difficulty from motion, flow, target size and solution flexibility.
+Planned tools:
+- micro diamond drill
+- high-speed drill
+- laser drill
+- spring punch
+- glass cutter
+- controlled impact hammer
+- thermal tool
 
 ## Milestones
 
@@ -126,7 +80,7 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [x] CI
 - [x] AGENTS.md and project skills
 - [x] core plan
-- [ ] package lock after first install
+- [ ] package lock after first install committed
 
 ### M1 — First playable physics loop
 - [x] orbit camera
@@ -135,25 +89,25 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [x] nested glass prototype
 - [x] deterministic fluid compartment
 - [x] selectable hole diameter
-- [x] target zone
-- [x] hold-to-drill prototype
+- [x] hold-to-drill
+- [x] fixed-step simulation
+- [x] visible drill state machine
 - [x] pressure/head-based outflow
-- [x] first rigid-body force coupling
-- [x] first jet reaction coupling
-- [x] visible drill model with approach/contact/drill/breakthrough/retract states\n- [ ] surface-normal alignment and physical contact validation
-- [x] fixed-step accumulator independent of render FPS
-- [x] submerged-volume buoyancy for the first dynamic sphere
+- [x] lower-receiver accumulation
+- [x] submerged-volume buoyancy
 - [x] crack visualization and catastrophic failure
-- [x] first multi-condition objective completion
-- [x] deterministic reset/retry flow
+- [x] multi-condition win state
+- [x] deterministic reset/retry
+- [x] directional jet force + visual
 - [ ] visual polish pass
 
 ### M2 — Robust drilling & glass
-- [ ] raycast surface position/normal
-- [x] target zones attached to vessel transforms
+- [x] targets attached to vessel transforms
 - [x] steadiness/alignment metrics
 - [x] local target stress model
 - [x] crack rendering
+- [x] geometry-derived surface normal via ray intersection with target vessel
+- [x] angle gate before contact/drilling
 - [ ] authored breakable regions
 - [ ] protected-object failure rules
 - [ ] drill audio/haptics hooks
@@ -162,16 +116,17 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [ ] compartment graph
 - [ ] stream-to-receiver intersection
 - [ ] overflow routing
-- [ ] multiple simultaneous holes
-- [x] first directional jet force + visual
+- [x] multiple simultaneous holes supported by fluid model
+- [x] directional jet force + visual
 - [ ] contained-water mass coupling
 - [ ] center-of-mass approximation
-- [x] first live fluid/body telemetry HUD
+- [x] live fluid/body telemetry HUD
 
 ### M4 — Level framework
-- [ ] level schema
+- [x] first data-driven level schema
 - [x] first objective/failure evaluation system
-- [x] restart/replay for vertical slice
+- [x] restart/replay
+- [x] data-driven drill target definitions
 - [ ] level selection
 - [ ] save progress
 - [ ] six handcrafted levels
@@ -210,15 +165,22 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [ ] deployment pipeline
 
 ## Current state — 2026-09-28
-Foundation implementation on `feat/vertical-slice-foundation` includes Babylon/Havok bootstrap, orbit camera, glass chamber, nested puzzle prototype, numerical fluid compartment, continuous inlet, selectable prototype hole sizes, hold-to-drill target, crack-risk accumulation, real simulation hole creation, first outflow-driven force coupling and HUD.
+Development is performed directly on `main`.
 
-The force coupling and water meshes are explicitly first-pass approximations. They prove the causal architecture but are not production buoyancy or water rendering.
+The first vertical slice now includes a deterministic fluid model, fixed-step timing, Havok rigid-body physics, submerged-volume buoyancy, a visible drill, alignment/steadiness-sensitive drilling, local glass stress, cracking/failure, replay/reset, live telemetry and directional flow feedback.
+
+The first level is now data-driven. It has two drillable regions:
+- **Main drain** — larger effective opening, lower on the vessel, best for moving significant water.
+- **Pressure relief** — smaller high opening that can reduce pressure with lower transferred volume, giving the player a safer preparatory option before drilling the main outlet.
+
+Both openings can coexist, so target order starts to matter. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
+
+The water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering.
 
 ## Next implementation batch
-1. Add fixed-step simulation accumulator.
-2. Replace coarse drain boost with submerged-volume buoyancy.
-3. Build a visible drill with aim/approach/contact/retract state machine.
-4. Attach targets to vessel surfaces and compute normals.
-5. Add crack visualization + catastrophic failure.
-6. Add level state machine with success/failure/retry.
-7. Add debug overlay for volume, fill, head, flow and body velocity.
+1. Make the pressure-relief target materially reduce later drilling stress on the main target.
+2. Add source volume and hydraulic head to telemetry.
+3. Add splash/bubble particles driven strictly from simulated flow.
+4. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
+5. Add the second handcrafted level with a moving/rotating vessel.
+6. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
