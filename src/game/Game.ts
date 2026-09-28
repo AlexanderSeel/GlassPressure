@@ -328,11 +328,7 @@ export class Game {
       );
     }
 
-    this.jetVisual = new JetStreamVisual(this.scene, water);
-    this.flowVisuals = new FlowVisuals(
-      this.scene,
-      this.quality.flowParticlePoolSize,
-    );
+    this.buildLeakVisuals();
     this.overflowVisuals = new FlowVisuals(
       this.scene,
       Math.max(8, Math.floor(this.quality.flowParticlePoolSize * 0.7)),
