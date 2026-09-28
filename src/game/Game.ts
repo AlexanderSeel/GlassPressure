@@ -29,6 +29,7 @@ import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
+import { FlowVisuals } from "./scene/FlowVisuals";
 import { DrillController } from "./tools/DrillController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
@@ -64,6 +65,7 @@ export class Game {
   private dynamicBody!: PhysicsAggregate;
   private targetHost!: Mesh;
   private drillRoot!: TransformNode;
+  private flowVisuals!: FlowVisuals;
 
   private readonly targets: TargetRuntime[] = [];
   private activeTarget: TargetRuntime | null = null;
@@ -237,6 +239,7 @@ export class Game {
     );
     this.jetMesh.material = water;
     this.jetMesh.visibility = 0;
+    this.flowVisuals = new FlowVisuals(this.scene);
     this.jetMesh.isPickable = false;
 
     const inlet = MeshBuilder.CreateCylinder(
@@ -480,6 +483,7 @@ export class Game {
     this.applyBuoyancy();
     this.applyJetForce(result.outflowM3);
     this.updateJetVisual(result.outflowM3);
+    this.updateFlowVisuals(result.outflowM3, dt);
     this.updateWaterVisuals();
 
     if (this.levelPhase === "playing") {
@@ -612,6 +616,21 @@ export class Game {
     this.jetMesh.rotate(Vector3.Right(), Math.PI / 2);
   }
 
+  private updateFlowVisuals(outflowM3: number, dt: number): void {
+    const target = this.latestOpenedTarget;
+    if (!target || outflowM3 <= 0) {
+      this.flowVisuals.update(dt, 0, null, null);
+      return;
+    }
+
+    this.flowVisuals.update(
+      dt,
+      outflowM3,
+      target.marker.getAbsolutePosition(),
+      this.targetSurfaceNormal(target),
+    );
+  }
+
   private updateWaterVisuals(): void {
     const upperFill = this.fluid.getFillRatio(this.vessel);
     const upperHeight = 0.03 + upperFill * 1.02;
@@ -653,6 +672,7 @@ export class Game {
 
     this.jetMesh.visibility = 0;
     this.jetMesh.scaling.setAll(1);
+    this.flowVisuals.reset();
 
     this.dynamicBody.transformNode.position.copyFromFloats(0.45, 1.75, 0);
     this.dynamicBody.body.setLinearVelocity(Vector3.Zero());

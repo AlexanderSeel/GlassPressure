@@ -134,7 +134,7 @@ Planned tools:
 ### M5 — Visual identity
 - [ ] production glass strategy
 - [ ] dynamic water surfaces
-- [ ] streams/splashes/bubbles
+- [x] first pooled flow droplets/bubbles driven by simulated outflow
 - [ ] quality tiers
 - [ ] caustics approximation
 - [ ] Botanical Atrium
@@ -178,9 +178,9 @@ Both openings can coexist, so target order matters. Opening the pressure-relief 
 The water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering.
 
 ## Next implementation batch
-1. Add splash/bubble particles driven strictly from simulated flow.
-2. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
-3. Add the second handcrafted level with a moving/rotating vessel.
-4. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
-5. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
-6. Add a first authored break region with bounded glass fragments.
+1. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
+2. Add the second handcrafted level with a moving/rotating vessel.
+3. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
+4. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
+5. Add a first authored break region with bounded glass fragments.
+6. Replace the prototype jet cylinder with a tapered/animated stream mesh and receiver splash.
