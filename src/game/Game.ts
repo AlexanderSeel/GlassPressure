@@ -12,16 +12,11 @@ import {
   PhysicsAggregate,
   PhysicsShapeType,
   PBRMaterial,
-  Ray,
   Scene,
-  StandardMaterial,
   TransformNode,
   Vector3,
 } from "@babylonjs/core";
-import {
-  FIRST_LEVEL,
-  type DrillTargetDefinition,
-} from "./level/LevelDefinition";
+import { FIRST_LEVEL } from "./level/LevelDefinition";
 import { evaluateLevel, type LevelPhase } from "./level/LevelState";
 import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
@@ -30,6 +25,7 @@ import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
 import { FlowVisuals } from "./scene/FlowVisuals";
+import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
@@ -38,16 +34,6 @@ const RECEIVER_WATER_HEIGHT_SCENE = 1.45;
 const INNER_RADIUS_SCENE = 0.575;
 const SCENE_TO_METERS = 0.1;
 const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
-
-type TargetRuntime = {
-  definition: DrillTargetDefinition;
-  marker: Mesh;
-  material: StandardMaterial;
-  cracks: Mesh;
-  progress01: number;
-  stress01: number;
-  holeCreated: boolean;
-};
 
 export class Game {
   private readonly engine: Engine;
@@ -67,9 +53,9 @@ export class Game {
   private drillRoot!: TransformNode;
   private flowVisuals!: FlowVisuals;
 
-  private readonly targets: TargetRuntime[] = [];
-  private activeTarget: TargetRuntime | null = null;
-  private latestOpenedTarget: TargetRuntime | null = null;
+  private readonly targets: DrillTargetRuntime[] = [];
+  private activeTarget: DrillTargetRuntime | null = null;
+  private latestOpenedTarget: DrillTargetRuntime | null = null;
 
   private receiverVolumeM3 = this.level.initialReceiverVolumeM3;
   private diameterIndex = 1;
@@ -229,7 +215,7 @@ export class Game {
     this.createBasinCollision();
 
     for (const targetDefinition of this.level.targets) {
-      this.targets.push(this.createTarget(targetDefinition));
+      this.targets.push(new DrillTargetRuntime(this.scene, this.targetHost, targetDefinition));
     }
 
     this.jetMesh = MeshBuilder.CreateCylinder(
@@ -303,66 +289,6 @@ export class Game {
         this.scene,
       );
     }
-  }
-
-  private createTarget(definition: DrillTargetDefinition): TargetRuntime {
-    const marker = MeshBuilder.CreateTorus(
-      `drill-target-${definition.id}`,
-      {
-        diameter: definition.markerDiameterScene,
-        thickness: definition.effect === "pressure-relief" ? 0.045 : 0.055,
-        tessellation: 48,
-      },
-      this.scene,
-    );
-    marker.parent = this.targetHost;
-    marker.position.copyFromFloats(...definition.localPosition);
-    marker.rotation.copyFromFloats(...definition.localRotation);
-
-    const material = new StandardMaterial(
-      `target-material-${definition.id}`,
-      this.scene,
-    );
-    if (definition.effect === "pressure-relief") {
-      material.diffuseColor = new Color3(0.95, 0.52, 0.09);
-      material.emissiveColor = new Color3(0.68, 0.24, 0.02);
-    } else {
-      material.diffuseColor = new Color3(0.08, 0.8, 1);
-      material.emissiveColor = new Color3(0.04, 0.6, 0.95);
-    }
-    material.alpha = 0.82;
-    marker.material = material;
-
-    const cracks = MeshBuilder.CreateLines(
-      `target-cracks-${definition.id}`,
-      {
-        points: [
-          new Vector3(0, 0, 0),
-          new Vector3(-0.13, 0.12, 0),
-          new Vector3(-0.04, 0.035, 0),
-          new Vector3(0.14, 0.1, 0),
-          new Vector3(0.025, 0.02, 0),
-          new Vector3(0.1, -0.13, 0),
-          new Vector3(0.015, -0.025, 0),
-          new Vector3(-0.14, -0.1, 0),
-        ],
-      },
-      this.scene,
-    );
-    cracks.parent = marker;
-    cracks.color = new Color3(0.88, 0.95, 1);
-    cracks.visibility = 0;
-    cracks.isPickable = false;
-
-    return {
-      definition,
-      marker,
-      material,
-      cracks,
-      progress01: 0,
-      stress01: 0,
-      holeCreated: false,
-    };
   }
 
   private createDrill(): void {
@@ -501,7 +427,7 @@ export class Game {
   }
 
   private simulateActiveTarget(
-    target: TargetRuntime,
+    target: DrillTargetRuntime,
     alignment: number,
     pressurePa: number,
     dt: number,
@@ -662,12 +588,7 @@ export class Game {
     this.pointerMotion = 0;
 
     for (const target of this.targets) {
-      target.progress01 = 0;
-      target.stress01 = 0;
-      target.holeCreated = false;
-      target.marker.scaling.setAll(1);
-      target.cracks.visibility = 0;
-      this.resetTargetMaterial(target);
+      target.reset();
     }
 
     this.jetMesh.visibility = 0;
@@ -683,49 +604,17 @@ export class Game {
 
   private updateTargetVisuals(): void {
     for (const target of this.targets) {
-      const reveal = Math.min(
-        1,
-        Math.max(0, (target.stress01 - 0.22) / 0.58),
-      );
-      target.cracks.visibility = reveal;
-
-      if (!this.failed && !target.holeCreated) {
-        if (target.definition.effect === "pressure-relief") {
-          target.material.emissiveColor = new Color3(
-            0.68 + reveal * 0.2,
-            0.24 - reveal * 0.12,
-            0.02,
-          );
-        } else {
-          target.material.emissiveColor = new Color3(
-            0.04 + reveal * 0.42,
-            0.6 - reveal * 0.34,
-            0.95 - reveal * 0.55,
-          );
-        }
-      }
+      target.updateVisual(this.failed);
     }
   }
 
-  private failGlass(target: TargetRuntime): void {
+  private failGlass(target: DrillTargetRuntime): void {
     this.failed = true;
     this.levelPhase = "failed";
     this.targetLocked = false;
     this.activeTarget = target;
     this.drill.release();
-    target.material.diffuseColor = new Color3(0.75, 0.08, 0.06);
-    target.material.emissiveColor = new Color3(0.8, 0.03, 0.02);
-    target.cracks.visibility = 1;
-  }
-
-  private resetTargetMaterial(target: TargetRuntime): void {
-    if (target.definition.effect === "pressure-relief") {
-      target.material.diffuseColor = new Color3(0.95, 0.52, 0.09);
-      target.material.emissiveColor = new Color3(0.68, 0.24, 0.02);
-    } else {
-      target.material.diffuseColor = new Color3(0.08, 0.8, 1);
-      target.material.emissiveColor = new Color3(0.04, 0.6, 0.95);
-    }
+    target.showFailure();
   }
 
   private updateToolVisual(): void {
@@ -817,35 +706,12 @@ export class Game {
     }
   }
 
-  private targetAlignment01(target: TargetRuntime): number {
-    const targetPosition = target.marker.getAbsolutePosition();
-    const approach = targetPosition.subtract(this.camera.position).normalize();
-    const normal = this.targetSurfaceNormal(target);
-    return Math.min(1, Math.max(0, Vector3.Dot(approach, normal.scale(-1))));
+  private targetAlignment01(target: DrillTargetRuntime): number {
+    return target.alignment01(this.camera.position);
   }
 
-  private targetSurfaceNormal(target: TargetRuntime): Vector3 {
-    const targetPosition = target.marker.getAbsolutePosition();
-    const toTarget = targetPosition.subtract(this.camera.position);
-    const length = Math.max(0.001, toTarget.length());
-    const ray = new Ray(
-      this.camera.position,
-      toTarget.scale(1 / length),
-      length + 2,
-    );
-    const hit = this.targetHost.intersects(ray, false);
-    const hitNormal = hit.hit ? hit.getNormal(true, true) : null;
-
-    if (hitNormal && hitNormal.lengthSquared() > 0.0001) {
-      return hitNormal.normalize();
-    }
-
-    const hostCenter = this.targetHost.getAbsolutePosition();
-    const fallback = targetPosition.subtract(hostCenter);
-    fallback.y = 0;
-    return fallback.lengthSquared() > 0.0001
-      ? fallback.normalize()
-      : new Vector3(0, 0, -1);
+  private targetSurfaceNormal(target: DrillTargetRuntime): Vector3 {
+    return target.surfaceNormal(this.camera.position);
   }
 
   private get drillSteadiness01(): number {

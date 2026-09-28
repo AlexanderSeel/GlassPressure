@@ -175,10 +175,10 @@ The first level is now data-driven. It has two drillable regions:
 
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
-The water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering.
+The water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals now live in a dedicated `DrillTargetRuntime` module instead of the main game class.
 
 ## Next implementation batch
-1. Split `Game.ts` into scene, target interaction, level runtime and telemetry modules before it grows further.
+1. Continue splitting `Game.ts`: move telemetry/HUD and level runtime out next; target runtime is now isolated.
 2. Add the second handcrafted level with a moving/rotating vessel.
 3. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
 4. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
