@@ -414,7 +414,6 @@ export class Game {
     this.runtime.evaluate({
       glassFailed: this.failed,
       holeCreated: this.hasPrimaryDrain,
-      drillProgress01: this.activeTarget?.progress01 ?? 0,
       sourceFill01: this.fluid.getFillRatio(this.vessel),
       receiverFill01: this.receiverFill,
       innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
@@ -721,6 +720,7 @@ export class Game {
           : this.hasPrimaryDrain
             ? "Main drain opened"
             : "Choose target"),
+      drillProgress01: this.activeTarget?.progress01 ?? 0,
       sourceFill01: this.fluid.getFillRatio(this.vessel),
       receiverFill01: this.receiverFill,
       sourceVolumeM3: this.vessel.volumeM3,
