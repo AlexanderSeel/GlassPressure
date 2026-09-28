@@ -1,5 +1,6 @@
 import {
   Color3,
+  LinesMesh,
   Mesh,
   MeshBuilder,
   Ray,
@@ -12,7 +13,7 @@ import type { DrillTargetDefinition } from "../level/LevelDefinition";
 export class DrillTargetRuntime {
   public readonly marker: Mesh;
   public readonly material: StandardMaterial;
-  public readonly cracks: Mesh;
+  public readonly cracks: LinesMesh;
 
   public progress01 = 0;
   public stress01 = 0;
