@@ -116,7 +116,7 @@ export class Game{
       this.drillProgress+=dt*.34;
       this.crackRisk=Math.min(1,this.crackRisk+dt*instability*.11);
       if(this.drillProgress>=1){
-        this.fluid.addHole(this.vessel,DIAMETERS[this.diameterIndex],.08);
+        this.fluid.addHole(this.vessel,this.selectedDiameter,.08);
         this.holeCreated=true;this.drilling=false;this.drillTarget.scaling.setAll(.55);
       }
     }else this.crackRisk=Math.max(0,this.crackRisk-dt*.018);
@@ -141,12 +141,12 @@ export class Game{
     this.waterMesh.position.y=3.06+height*.5;
   }
 
-  private updateHud(pressurePa?:number):void{
+  private get selectedDiameter():number{return DIAMETERS[this.diameterIndex]??DIAMETERS[1];}\n\n  private updateHud(pressurePa?:number):void{
     const pressure=document.querySelector<HTMLElement>("#pressure");
     const risk=document.querySelector<HTMLElement>("#risk");
     const diameter=document.querySelector<HTMLElement>("#diameter");
     if(pressure&&pressurePa!==undefined)pressure.textContent=`${(pressurePa/1000).toFixed(1)} kPa`;
     if(risk)risk.textContent=`${Math.round(this.crackRisk*100)}%`;
-    if(diameter)diameter.textContent=`${(DIAMETERS[this.diameterIndex]*1000).toFixed(0)} mm`;
+    if(diameter)diameter.textContent=`${(this.selectedDiameter*1000).toFixed(0)} mm`;
   }
 }
