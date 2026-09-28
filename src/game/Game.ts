@@ -28,7 +28,7 @@ import { createBasinCollision } from "./scene/BasinCollision";
 import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
-import { JetStreamVisual } from "./scene/JetStreamVisual";
+import { TargetLeakVisual } from "./scene/TargetLeakVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -69,16 +69,15 @@ export class Game {
   private targetHost!: Mesh;
   private sourceRing!: Mesh;
   private drillRoot!: TransformNode;
-  private flowVisuals!: FlowVisuals;
   private overflowVisuals!: FlowVisuals;
   private breakVisuals!: GlassBreakVisuals;
-  private jetVisual!: JetStreamVisual;
   private nestedVessel!: NestedVesselRuntime;
+  private waterMaterial!: PBRMaterial;
+  private readonly leakVisuals = new Map<string, TargetLeakVisual>();
   private sourceCupCollision: CupCollision | null = null;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
-  private latestOpenedTarget: DrillTargetRuntime | null = null;
 
   private receiverVolumeM3 = this.runtime.level.initialReceiverVolumeM3;
   private diameterIndex = 1;
@@ -138,6 +137,7 @@ export class Game {
       this.quality.glassRefractionIntensity,
     );
     const water = createWaterMaterial("water", this.scene);
+    this.waterMaterial = water;
     const upperSurfaceMaterial = createWaterSurfaceMaterial(
       "upper-water-surface-material",
       this.scene,
