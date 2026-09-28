@@ -50,6 +50,8 @@ Havok handles transforms, collisions, gravity, constraints, dynamic vessels and 
 ### Fluid gameplay
 Liquid logic is numerical and authoritative. Visual water follows the simulation.
 
+**Multi-hole persistence:** every drilled opening is permanent for the level unless the glass itself breaks. Opening a second/third hole must never close, replace, or visually suppress an earlier one. Each hole keeps its own flow value, stream/drips, outlet position and contribution to total outflow/pressure.
+
 Initial outflow:
 `Q = Cd * A * sqrt(2 * g * h)`
 
@@ -117,7 +119,7 @@ Planned tools:
 - [ ] compartment graph
 - [ ] stream-to-receiver intersection
 - [x] source overflow routed into lower receiver
-- [x] multiple simultaneous holes supported by fluid model
+- [x] multiple simultaneous holes supported by fluid model and rendered independently
 - [x] directional jet force + visual
 - [x] contained-water weight coupling on nested dynamic vessels
 - [ ] center-of-mass approximation
