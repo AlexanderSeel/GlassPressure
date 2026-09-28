@@ -195,14 +195,19 @@ export class Game {
 
     this.upperWaterMesh = MeshBuilder.CreateCylinder(
       "upper-water",
-      { diameter: 3.35, height: 1, tessellation: 64 },
+      {
+        diameter: 3.35,
+        height: 1,
+        tessellation: 64,
+        cap: Mesh.NO_CAP,
+      },
       this.scene,
     );
     this.upperWaterMesh.parent = upper;
     this.upperWaterMesh.position.y = -0.25;
     this.upperWaterMesh.material = water;
     this.upperWaterMesh.isPickable = false;
-    this.upperWaterMesh.visibility = 0.5;
+    this.upperWaterMesh.visibility = 0.24;
 
     this.upperWaterSurface = new WaterSurfaceVisual(
       this.scene,
@@ -216,12 +221,17 @@ export class Game {
 
     this.receiverWaterMesh = MeshBuilder.CreateCylinder(
       "receiver-water",
-      { diameter: 5.1, height: 1, tessellation: 72 },
+      {
+        diameter: 5.1,
+        height: 1,
+        tessellation: 72,
+        cap: Mesh.NO_CAP,
+      },
       this.scene,
     );
     this.receiverWaterMesh.material = water;
     this.receiverWaterMesh.isPickable = false;
-    this.receiverWaterMesh.visibility = 0.48;
+    this.receiverWaterMesh.visibility = 0.22;
 
     this.receiverWaterSurface = new WaterSurfaceVisual(
       this.scene,
@@ -686,33 +696,78 @@ export class Game {
     this.receiverWaterMesh.scaling.y = lowerHeight;
     this.receiverWaterMesh.position.y = RECEIVER_BASE_Y + lowerHeight * 0.5;
 
+    const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const bodyVelocity = this.dynamicBody.body.getLinearVelocity();
+    const nestedPosition = this.nestedVessel.position;
+    const nestedVelocity = this.nestedVessel.linearVelocity;
     const transferRate = transferredM3 / Math.max(dt, 1 / 120);
     const transferAgitation = Math.min(1, transferRate * 2600);
-    const bodyAgitation = Math.min(1, bodyVelocity.length() * 0.45);
+    const bodyAgitation = Math.min(
+      1,
+      bodyVelocity.length() * 0.45 + nestedVelocity.length() * 0.32,
+    );
+
+    const hostPosition = this.targetHost.getAbsolutePosition();
+    const primaryInsideSource =
+      this.waterSurfaceForBody(bodyPosition) === this.sourceWaterSurfaceY;
+    const nestedInsideSource =
+      this.nestedVessel.enabled &&
+      this.waterSurfaceForBody(nestedPosition) === this.sourceWaterSurfaceY;
+
+    const sourceDisturbancePosition = nestedInsideSource
+      ? nestedPosition
+      : bodyPosition;
+    const sourceDisturbanceVelocity = nestedInsideSource
+      ? nestedVelocity
+      : bodyVelocity;
 
     this.upperWaterSurface.update({
       surfaceY: -0.86 + upperHeight,
       fill01: upperFill,
       agitation01: Math.min(
         1,
-        0.12 + this.vessel.inletM3PerSecond * 1800 + this.lastOutflowM3 * 2200,
+        0.18 + this.vessel.inletM3PerSecond * 2100 + this.lastOutflowM3 * 2400,
       ),
-      velocityX: 0,
-      velocityZ: 0,
+      velocityX: primaryInsideSource ? bodyVelocity.x : 0,
+      velocityZ: primaryInsideSource ? bodyVelocity.z : 0,
+      inlet01: Math.min(1, this.vessel.inletM3PerSecond * 3600),
+      disturbanceX: sourceDisturbancePosition.x - hostPosition.x,
+      disturbanceZ: sourceDisturbancePosition.z - hostPosition.z,
+      disturbance01:
+        primaryInsideSource || nestedInsideSource
+          ? Math.min(1, sourceDisturbanceVelocity.length() * 0.75)
+          : 0,
+      cameraPosition: this.camera.position,
       timeSeconds: this.runtime.elapsedSeconds,
+      dtSeconds: dt,
     });
+
+    const receiverBodyPosition = primaryInsideSource
+      ? nestedPosition
+      : bodyPosition;
+    const receiverBodyVelocity = primaryInsideSource
+      ? nestedVelocity
+      : bodyVelocity;
 
     this.receiverWaterSurface.update({
       surfaceY: RECEIVER_BASE_Y + lowerHeight,
       fill01: this.receiverFill,
       agitation01: Math.min(
         1,
-        transferAgitation * 0.72 + bodyAgitation * 0.48,
+        transferAgitation * 0.85 + bodyAgitation * 0.5,
       ),
-      velocityX: bodyVelocity.x,
-      velocityZ: bodyVelocity.z,
+      velocityX: receiverBodyVelocity.x,
+      velocityZ: receiverBodyVelocity.z,
+      inlet01: Math.min(1, transferAgitation),
+      disturbanceX: receiverBodyPosition.x,
+      disturbanceZ: receiverBodyPosition.z,
+      disturbance01: Math.min(
+        1,
+        receiverBodyVelocity.length() * 0.65 + transferAgitation * 0.55,
+      ),
+      cameraPosition: this.camera.position,
       timeSeconds: this.runtime.elapsedSeconds,
+      dtSeconds: dt,
     });
   }
 

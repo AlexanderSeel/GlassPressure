@@ -183,6 +183,21 @@ The canonical first-level loop is now:
 
 This nested-lift/escape sequence is the product-defining vertical slice. Later routing, rotating-ring and pressure experiments remain useful systems, but they must not replace this core fantasy.
 
+## Water rendering correction — 2026-09-28
+
+The previous water renderer still looked like a blue polygonal fill. The presentation layer is being corrected without changing the authoritative compartment simulation:
+
+- water volume meshes are now **open-sided depth shells** with no fake solid top/bottom caps;
+- the visible liquid top is a dedicated animated shader surface;
+- the surface uses Fresnel-like edge response, moving specular highlights and procedural micro-normal motion;
+- slosh tilt is spring-damped so movement carries momentum instead of snapping directly to body velocity;
+- the inlet continuously injects concentric ripple energy at the impact point;
+- nearby vessel motion injects local travelling disturbances into the surface;
+- receiver water reacts to transferred flow and escaped-body motion;
+- the numerical fill level remains authoritative; waves only perturb the rendered surface.
+
+This is still a game-fluid renderer rather than full CFD, but it must visually read as a moving liquid rather than a scaled translucent cylinder.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -207,6 +222,8 @@ Current interaction usability: the thin torus is no longer the only pickable geo
 5. Add a third nested glass object with a different visual shape so Level 1 demonstrates a true multi-layer nest, not only two bodies.
 6. [x] Replace the first spherical nested visuals with open glass cup/bell forms while retaining stable spherical collision proxies.
 7. Add visual water transfer from parent cup overflow/holes into the surrounding chamber at the actual transfer locations.
-8. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
-9. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
-10. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.
+8. [x] Replace capped blue fill meshes with open-sided depth volume + dedicated animated liquid shader surface.
+9. [x] Add persistent slosh, inlet ripple propagation and body-driven local water disturbances.
+10. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
+11. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
+12. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

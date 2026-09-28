@@ -216,6 +216,10 @@ export class NestedVesselRuntime {
     return this.lastPressurePa;
   }
 
+  public get linearVelocity(): Vector3 {
+    return this.body.body.getLinearVelocity();
+  }
+
   public get fluidVolumeM3(): number {
     return this.compartment?.volumeM3 ?? 0;
   }
