@@ -17,11 +17,12 @@ import {
   TransformNode,
   Vector3,
 } from "@babylonjs/core";
+import { evaluateLevel, type LevelPhase } from "./level/LevelState";
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
+import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
-import { evaluateLevel, type LevelPhase } from "./level/LevelState";
 import { DrillController } from "./tools/DrillController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
@@ -45,6 +46,9 @@ export class Game {
   private receiverWaterMesh!: Mesh;
   private dynamicBody!: PhysicsAggregate;
   private drillTarget!: Mesh;
+  private targetHost!: Mesh;
+  private crackMesh!: Mesh;
+  private targetMaterial!: StandardMaterial;
   private drillRoot!: TransformNode;
 
   private receiverVolumeM3 = 0.008;
@@ -55,6 +59,9 @@ export class Game {
   private holeCreated = false;
   private lastPressurePa = 0;
   private lastOutflowM3 = 0;
+  private pointerMotion = 0;
+  private failed = false;
+  private levelPhase: LevelPhase = "playing";
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, {
@@ -155,6 +162,7 @@ export class Game {
     upper.position.y = 3.65;
     upper.material = glass;
     upper.isPickable = false;
+    this.targetHost = upper;
 
     this.upperWaterMesh = MeshBuilder.CreateCylinder(
       "upper-water",
@@ -221,13 +229,37 @@ export class Game {
       { diameter: 0.56, thickness: 0.055, tessellation: 48 },
       this.scene,
     );
-    this.drillTarget.position = new Vector3(0, 3.68, -1.82);
+    this.drillTarget.parent = upper;
+    this.drillTarget.position = new Vector3(0, 0.03, -1.82);
     this.drillTarget.rotation.x = Math.PI / 2;
-    const targetMat = new StandardMaterial("target-material", this.scene);
-    targetMat.diffuseColor = new Color3(0.08, 0.8, 1);
-    targetMat.emissiveColor = new Color3(0.04, 0.6, 0.95);
-    targetMat.alpha = 0.82;
-    this.drillTarget.material = targetMat;
+
+    this.targetMaterial = new StandardMaterial("target-material", this.scene);
+    this.targetMaterial.diffuseColor = new Color3(0.08, 0.8, 1);
+    this.targetMaterial.emissiveColor = new Color3(0.04, 0.6, 0.95);
+    this.targetMaterial.alpha = 0.82;
+    this.drillTarget.material = this.targetMaterial;
+
+    const cracks = MeshBuilder.CreateLines(
+      "target-cracks",
+      {
+        points: [
+          new Vector3(0, 0.03, -1.835),
+          new Vector3(-0.14, 0.14, -1.835),
+          new Vector3(-0.04, 0.04, -1.835),
+          new Vector3(0.15, 0.12, -1.835),
+          new Vector3(0.03, 0.02, -1.835),
+          new Vector3(0.12, -0.14, -1.835),
+          new Vector3(0.02, -0.03, -1.835),
+          new Vector3(-0.16, -0.11, -1.835),
+        ],
+      },
+      this.scene,
+    );
+    cracks.parent = upper;
+    cracks.color = new Color3(0.88, 0.95, 1);
+    cracks.visibility = 0;
+    cracks.isPickable = false;
+    this.crackMesh = cracks;
 
     const inlet = MeshBuilder.CreateCylinder(
       "inlet-stream",
@@ -300,17 +332,26 @@ export class Game {
     bitMat.roughness = 0.18;
     bit.material = bitMat;
 
-    body.isPickable = collar.isPickable = bit.isPickable = false;
+    body.isPickable = false;
+    collar.isPickable = false;
+    bit.isPickable = false;
   }
 
   private bindInput(): void {
     this.canvas.addEventListener("pointerdown", event => {
-      if (event.button !== 0 || this.holeCreated) return;
+      if (event.button !== 0 || this.holeCreated || this.failed) return;
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       if (pick?.pickedMesh === this.drillTarget) {
         this.targetLocked = true;
         this.drill.press();
       }
+    });
+
+    window.addEventListener("pointermove", event => {
+      this.pointerMotion = Math.min(
+        600,
+        this.pointerMotion + Math.hypot(event.movementX, event.movementY) * 7,
+      );
     });
 
     window.addEventListener("pointerup", () => {
@@ -328,7 +369,7 @@ export class Game {
   }
 
   private simulate(dt: number): void {
-    this.drill.step(dt, this.targetLocked && !this.holeCreated);
+    this.drill.step(dt, this.targetLocked && !this.holeCreated && !this.failed);
 
     const result = this.fluid.step(this.vessel, dt);
     this.lastPressurePa = result.pressurePa;
@@ -338,10 +379,27 @@ export class Game {
       this.receiverVolumeM3 + result.outflowM3,
     );
 
-    if (this.drill.isDrilling && !this.holeCreated) {
-      const instability = 0.42 + this.diameterIndex * 0.23;
-      this.drillProgress += dt * 0.34;
-      this.crackRisk = Math.min(1, this.crackRisk + dt * instability * 0.11);
+    this.pointerMotion *= Math.exp(-dt * 7.5);
+    const alignment = this.drillAlignment01;
+    const steadiness = this.drillSteadiness01;
+    const stress = stepGlassStress(
+      this.crackRisk,
+      {
+        drilling: this.drill.isDrilling && !this.holeCreated && !this.failed,
+        alignment01: alignment,
+        steadiness01: steadiness,
+        diameterMeters: this.selectedDiameter,
+        localPressurePa: result.pressurePa,
+        wallThicknessMeters: 0.004,
+        nearbyDamage01: Math.max(0, this.crackRisk - 0.55),
+      },
+      dt,
+    );
+    this.crackRisk = stress.stress01;
+
+    if (this.drill.isDrilling && !this.holeCreated && !this.failed) {
+      const efficiency = drillingEfficiency(alignment, steadiness);
+      this.drillProgress += dt * 0.42 * efficiency;
 
       if (this.drillProgress >= 1) {
         this.fluid.addHole(this.vessel, this.selectedDiameter, 0.08);
@@ -350,10 +408,13 @@ export class Game {
         this.drill.notifyBreakthrough();
         this.drillTarget.scaling.setAll(0.55);
       }
-    } else {
-      this.crackRisk = Math.max(0, this.crackRisk - dt * 0.018);
     }
 
+    if (this.crackRisk >= 1 && !this.failed) {
+      this.failGlass();
+    }
+
+    this.updateCrackVisual();
     this.applyBuoyancy();
     this.applyJetForce(result.outflowM3);
     this.updateWaterVisuals();
@@ -371,9 +432,8 @@ export class Game {
 
   private applyBuoyancy(): void {
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
-    const waterSurfaceY = this.receiverWaterSurfaceY;
     const sphereBottomY = bodyPosition.y - INNER_RADIUS_SCENE;
-    const immersionScene = Math.max(0, waterSurfaceY - sphereBottomY);
+    const immersionScene = Math.max(0, this.receiverWaterSurfaceY - sphereBottomY);
     const immersionMeters = immersionScene * SCENE_TO_METERS;
 
     const submergedVolume = submergedSphereVolume(INNER_RADIUS_METERS, immersionMeters);
@@ -387,7 +447,10 @@ export class Game {
     );
 
     const upward = new Vector3(0, Math.min(8, buoyancy), 0);
-    this.dynamicBody.body.applyForce(upward.add(drag), bodyPosition);
+    this.dynamicBody.body.applyForce(
+      upward.add(drag),
+      bodyPosition,
+    );
   }
 
   private applyJetForce(outflowM3: number): void {
@@ -395,7 +458,10 @@ export class Game {
 
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const jet = Math.min(1.35, outflowM3 * 420000);
-    this.dynamicBody.body.applyForce(new Vector3(jet, jet * 0.12, 0), bodyPosition);
+    this.dynamicBody.body.applyForce(
+      new Vector3(jet, jet * 0.12, 0),
+      bodyPosition,
+    );
   }
 
   private updateWaterVisuals(): void {
@@ -404,10 +470,67 @@ export class Game {
     this.upperWaterMesh.scaling.y = upperHeight;
     this.upperWaterMesh.position.y = 3.06 + upperHeight * 0.5;
 
-    const receiverFill = this.receiverFill;
-    const lowerHeight = Math.max(0.025, receiverFill * RECEIVER_WATER_HEIGHT_SCENE);
+    const lowerHeight = Math.max(
+      0.025,
+      this.receiverFill * RECEIVER_WATER_HEIGHT_SCENE,
+    );
     this.receiverWaterMesh.scaling.y = lowerHeight;
     this.receiverWaterMesh.position.y = RECEIVER_BASE_Y + lowerHeight * 0.5;
+  }
+
+  private resetLevel(): void {
+    this.fixedStep.reset();
+    this.drill.reset();
+    this.vessel.volumeM3 = 0.0084;
+    this.vessel.holes.length = 0;
+    this.receiverVolumeM3 = 0.008;
+    this.drillProgress = 0;
+    this.crackRisk = 0;
+    this.diameterIndex = 1;
+    this.targetLocked = false;
+    this.holeCreated = false;
+    this.failed = false;
+    this.levelPhase = "playing";
+    this.lastPressurePa = 0;
+    this.lastOutflowM3 = 0;
+    this.pointerMotion = 0;
+
+    this.drillTarget.scaling.setAll(1);
+    this.crackMesh.visibility = 0;
+    this.targetMaterial.diffuseColor = new Color3(0.08, 0.8, 1);
+    this.targetMaterial.emissiveColor = new Color3(0.04, 0.6, 0.95);
+
+    this.dynamicBody.transformNode.position.copyFromFloats(0.45, 1.75, 0);
+    this.dynamicBody.body.setLinearVelocity(Vector3.Zero());
+    this.dynamicBody.body.setAngularVelocity(Vector3.Zero());
+
+    this.updateWaterVisuals();
+  }
+
+  private updateCrackVisual(): void {
+    const reveal = Math.min(
+      1,
+      Math.max(0, (this.crackRisk - 0.22) / 0.58),
+    );
+    this.crackMesh.visibility = reveal;
+
+    if (!this.failed) {
+      this.targetMaterial.emissiveColor = new Color3(
+        0.04 + reveal * 0.42,
+        0.6 - reveal * 0.34,
+        0.95 - reveal * 0.55,
+      );
+    }
+  }
+
+  private failGlass(): void {
+    this.failed = true;
+    this.levelPhase = "failed";
+    this.targetLocked = false;
+    this.drill.release();
+    this.targetMaterial.diffuseColor = new Color3(0.75, 0.08, 0.06);
+    this.targetMaterial.emissiveColor = new Color3(0.8, 0.03, 0.02);
+    this.crackMesh.visibility = 1;
   }
 
   private updateToolVisual(): void {
@@ -418,7 +541,9 @@ export class Game {
     const direction = toTarget.normalize();
 
     const standOff = 1.25 - this.drill.extension * 0.82;
-    this.drillRoot.position = cameraPosition.add(direction.scale(Math.max(0.35, distance - standOff)));
+    this.drillRoot.position = cameraPosition.add(
+      direction.scale(Math.max(0.35, distance - standOff)),
+    );
     this.drillRoot.lookAt(target);
   }
 
@@ -431,12 +556,24 @@ export class Game {
     const flow = document.querySelector<HTMLElement>("#flow");
     const levelState = document.querySelector<HTMLElement>("#level-state");
 
-    if (pressure) pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
-    if (risk) risk.textContent = `${Math.round(this.crackRisk * 100)}%`;
-    if (diameter) diameter.textContent = `${(this.selectedDiameter * 1000).toFixed(0)} mm`;
-    if (toolState) toolState.textContent = this.failed ? "glass failed" : this.drill.state;
-    if (alignment) alignment.textContent = `${Math.round(this.drillAlignment01 * 100)}%`;
-    if (flow) flow.textContent = `${(this.lastOutflowM3 * 60_000_000).toFixed(1)} mL/s`;
+    if (pressure) {
+      pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
+    }
+    if (risk) {
+      risk.textContent = this.failed ? "FAILED" : `${Math.round(this.crackRisk * 100)}%`;
+    }
+    if (diameter) {
+      diameter.textContent = `${(this.selectedDiameter * 1000).toFixed(0)} mm`;
+    }
+    if (toolState) {
+      toolState.textContent = this.failed ? "glass failed" : this.drill.state;
+    }
+    if (alignment) {
+      alignment.textContent = `${Math.round(this.drillAlignment01 * 100)}%`;
+    }
+    if (flow) {
+      flow.textContent = `${(this.lastOutflowM3 * 60_000_000).toFixed(1)} mL/s`;
+    }
     if (levelState) {
       levelState.textContent =
         this.levelPhase === "won"
@@ -447,12 +584,33 @@ export class Game {
     }
   }
 
+  private get drillAlignment01(): number {
+    const target = this.drillTarget.getAbsolutePosition();
+    const approach = target.subtract(this.camera.position).normalize();
+    const normal = Vector3.TransformNormal(
+      new Vector3(0, 0, -1),
+      this.targetHost.getWorldMatrix(),
+    ).normalize();
+
+    return Math.min(
+      1,
+      Math.max(0, Vector3.Dot(approach, normal.scale(-1))),
+    );
+  }
+
+  private get drillSteadiness01(): number {
+    return Math.min(1, Math.max(0, 1 - this.pointerMotion / 220));
+  }
+
   private get selectedDiameter(): number {
     return DIAMETERS[this.diameterIndex] ?? 0.01;
   }
 
   private get receiverFill(): number {
-    return Math.min(1, Math.max(0, this.receiverVolumeM3 / RECEIVER_CAPACITY_M3));
+    return Math.min(
+      1,
+      Math.max(0, this.receiverVolumeM3 / RECEIVER_CAPACITY_M3),
+    );
   }
 
   private get receiverWaterSurfaceY(): number {
