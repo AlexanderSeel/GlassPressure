@@ -19,6 +19,9 @@ export type HudSnapshot = {
   innerHeightScene: number;
   innerXScene: number;
   bodySpeedScenePerSecond: number;
+  nestedEnabled: boolean;
+  nestedHeightScene: number;
+  nestedFill01: number;
   qualityTier: string;
 };
 
@@ -39,6 +42,8 @@ export class HudController {
     innerX: this.byId("inner-x"),
     bodyVelocity: this.byId("body-velocity"),
     selectedTarget: this.byId("selected-target"),
+    nestedHeight: this.byId("nested-height"),
+    nestedFill: this.byId("nested-fill"),
     quality: this.byId("quality-tier"),
   };
 
@@ -78,6 +83,12 @@ export class HudController {
     this.elements.innerX.textContent = `${snapshot.innerXScene.toFixed(2)} m`;
     this.elements.bodyVelocity.textContent =
       `${snapshot.bodySpeedScenePerSecond.toFixed(2)} m/s`;
+    this.elements.nestedHeight.textContent = snapshot.nestedEnabled
+      ? `${snapshot.nestedHeightScene.toFixed(2)} m`
+      : "—";
+    this.elements.nestedFill.textContent = snapshot.nestedEnabled
+      ? `${Math.round(snapshot.nestedFill01 * 100)}%`
+      : "—";
     this.elements.quality.textContent = snapshot.qualityTier.toUpperCase();
   }
 

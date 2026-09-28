@@ -12,7 +12,7 @@ describe("LevelState", () => {
     })).toBe("failed");
   });
 
-  it("does not win before a hole exists", () => {
+  it("does not win before a primary hole exists", () => {
     expect(evaluateLevel({
       glassFailed: false,
       holeCreated: false,
@@ -32,30 +32,33 @@ describe("LevelState", () => {
     })).toBe("won");
   });
 
-  it("can require lateral routing of the inner vessel", () => {
+  it("can require a secondary nested-vessel release", () => {
     const goal = {
       maxSourceFill01: 0.6,
       minReceiverFill01: 0.6,
       minInnerHeightScene: 2,
-      minInnerXScene: 0.7,
+      requireSecondaryHole: true,
+      minSecondaryHeightScene: 2.5,
     };
 
     expect(evaluateLevel({
       glassFailed: false,
       holeCreated: true,
+      secondaryHoleCreated: false,
       sourceFill01: 0.5,
       receiverFill01: 0.7,
       innerHeightScene: 2.2,
-      innerXScene: 0.4,
+      secondaryHeightScene: 2.8,
     }, goal)).toBe("playing");
 
     expect(evaluateLevel({
       glassFailed: false,
       holeCreated: true,
+      secondaryHoleCreated: true,
       sourceFill01: 0.5,
       receiverFill01: 0.7,
       innerHeightScene: 2.2,
-      innerXScene: 0.8,
+      secondaryHeightScene: 2.8,
     }, goal)).toBe("won");
   });
 });

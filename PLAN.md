@@ -129,7 +129,7 @@ Planned tools:
 - [x] data-driven drill target definitions
 - [ ] level selection
 - [ ] save progress
-- [ ] six handcrafted levels (3 implemented)
+- [ ] six handcrafted levels (4 implemented)
 
 ### M5 — Visual identity
 - [ ] production glass strategy
@@ -175,12 +175,12 @@ The first two levels are now data-driven. Level 1 has two drillable regions:
 
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
-Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. Level 3 (`Jet Routing`) adds two competing primary drains on opposite sides and requires the inner vessel to finish in a positive-X routing zone; the faster drain can therefore be the strategically wrong choice. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity, pooled flow-particle budget and bounded glass-fragment count without changing gameplay physics. Catastrophic target failure now spawns a small authored set of Havok-driven local fragments rather than attempting arbitrary runtime mesh fracture. The old rigid jet cylinder has been replaced by a tapered, flow-pulsed stream renderer with a receiver splash ring. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals live in `DrillTargetRuntime`. HUD DOM binding/rendering is isolated in `HudController`. Level indexing, cycling, timing, host motion offsets and phase evaluation now live in the tested `LevelRuntime`, leaving `Game.ts` primarily as the coordinator between physics, interaction and rendering.
+Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. Level 3 (`Jet Routing`) adds two competing primary drains on opposite sides and requires the inner vessel to finish in a positive-X routing zone; the faster drain can therefore be the strategically wrong choice. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. Level 4 (`Nested Release`) introduces a second Havok-driven glass vessel with its own contained-water compartment. The lower receiver must fill enough to buoy this vessel into an accessible height range before its purple nested-release target can be drilled. Draining that target transfers the trapped water to the receiver, reduces the extra water-weight force on the nested body and applies a reaction force from its own outflow jet. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity, pooled flow-particle budget and bounded glass-fragment count without changing gameplay physics. Catastrophic target failure now spawns a small authored set of Havok-driven local fragments rather than attempting arbitrary runtime mesh fracture. The old rigid jet cylinder has been replaced by a tapered, flow-pulsed stream renderer with a receiver splash ring. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals live in `DrillTargetRuntime`. HUD DOM binding/rendering is isolated in `HudController`. Level indexing, cycling, timing, host motion offsets and phase evaluation now live in the tested `LevelRuntime`, leaving `Game.ts` primarily as the coordinator between physics, interaction and rendering.
 
 ## Next implementation batch
-1. Add level 4 with two nested dynamic vessels and target accessibility changing through buoyancy.
-2. Add contained-water mass coupling once a dynamic vessel owns a drainable compartment.
+1. Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
+2. Add fragment lifetime/pooling before allowing multiple break events in one level.
 3. Add a manual quality override in settings after the settings/menu shell exists.
-4. Add fragment lifetime/pooling before allowing multiple break events in one level.
-5. Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
-6. Extract static scene/chamber construction from `Game.ts` if level 4 introduces additional geometry variants.
+4. Extract static scene/chamber construction from `Game.ts` now that multiple dynamic vessel types exist.
+5. Add level 5 around asymmetric chambers / rotating ring geometry.
+6. Generalize nested-vessel collision geometry beyond the current fixed spherical proxy before level 5 depends on it.

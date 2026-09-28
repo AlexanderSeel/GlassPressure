@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FIRST_LEVEL,
+  FOURTH_LEVEL,
   LEVELS,
   SECOND_LEVEL,
   THIRD_LEVEL,
@@ -34,5 +35,13 @@ describe("LevelDefinition", () => {
     expect(
       THIRD_LEVEL.targets.filter(target => target.effect === "primary-drain"),
     ).toHaveLength(2);
+  });
+
+  it("makes level four require a buoyancy-exposed nested release", () => {
+    expect(FOURTH_LEVEL.nestedVessel?.enabled).toBe(true);
+    expect(FOURTH_LEVEL.goal.requireSecondaryHole).toBe(true);
+    const nestedTarget = FOURTH_LEVEL.targets.find(target => target.host === "nested");
+    expect(nestedTarget?.effect).toBe("nested-drain");
+    expect(nestedTarget?.minHostHeightScene).toBeGreaterThan(2);
   });
 });

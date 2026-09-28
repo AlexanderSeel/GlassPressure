@@ -1,11 +1,14 @@
 import type { LevelGoal } from "./LevelState";
 
-export type DrillTargetEffect = "primary-drain" | "pressure-relief";
+export type DrillTargetEffect = "primary-drain" | "pressure-relief" | "nested-drain";
+export type DrillTargetHost = "source" | "nested";
 
 export type DrillTargetDefinition = {
   id: string;
   label: string;
   effect: DrillTargetEffect;
+  host?: DrillTargetHost;
+  minHostHeightScene?: number;
   localPosition: readonly [number, number, number];
   localRotation: readonly [number, number, number];
   markerDiameterScene: number;
@@ -22,6 +25,16 @@ export type HostMotionDefinition = {
   phaseRadians: number;
 };
 
+export type NestedVesselDefinition = {
+  enabled: boolean;
+  radiusScene: number;
+  initialPosition: readonly [number, number, number];
+  baseMassKg: number;
+  fluidCapacityM3: number;
+  initialFluidVolumeM3: number;
+  fluidHeightMeters: number;
+};
+
 export type LevelDefinition = {
   id: string;
   name: string;
@@ -34,6 +47,7 @@ export type LevelDefinition = {
   receiverCapacityM3: number;
   goal: LevelGoal;
   hostMotion?: HostMotionDefinition;
+  nestedVessel?: NestedVesselDefinition;
   targets: readonly DrillTargetDefinition[];
 };
 
@@ -185,10 +199,82 @@ export const THIRD_LEVEL: LevelDefinition = {
   ],
 };
 
+export const FOURTH_LEVEL: LevelDefinition = {
+  id: "nested-release",
+  name: "Nested Release",
+  objective:
+    "Fill the lower receiver, float the nested vessel into reach, then drain it to release its trapped weight.",
+  initialSourceVolumeM3: 0.0092,
+  sourceCapacityM3: 0.012,
+  sourceHeightMeters: 0.52,
+  sourceInletM3PerSecond: 0.00004,
+  initialReceiverVolumeM3: 0.0058,
+  receiverCapacityM3: 0.018,
+  goal: {
+    maxSourceFill01: 0.56,
+    minReceiverFill01: 0.64,
+    minInnerHeightScene: 2.0,
+    requireSecondaryHole: true,
+    minSecondaryHeightScene: 2.72,
+  },
+  nestedVessel: {
+    enabled: true,
+    radiusScene: 0.48,
+    initialPosition: [-0.65, 1.25, 0.25],
+    baseMassKg: 0.13,
+    fluidCapacityM3: 0.00048,
+    initialFluidVolumeM3: 0.0004,
+    fluidHeightMeters: 0.085,
+  },
+  targets: [
+    {
+      id: "nested-feed",
+      label: "Receiver feed",
+      effect: "primary-drain",
+      host: "source",
+      localPosition: [0.25, -0.14, -1.8],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.34,
+      holeDiameterScale: 0.95,
+      holeElevationMeters: 0.09,
+      wallThicknessMeters: 0.0036,
+      stressMultiplier: 1.1,
+    },
+    {
+      id: "nested-release-hole",
+      label: "Nested release",
+      effect: "nested-drain",
+      host: "nested",
+      minHostHeightScene: 2.28,
+      localPosition: [0, -0.03, -0.49],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.3,
+      holeDiameterScale: 0.7,
+      holeElevationMeters: 0.012,
+      wallThicknessMeters: 0.003,
+      stressMultiplier: 1.18,
+    },
+    {
+      id: "nested-relief",
+      label: "Pressure relief",
+      effect: "pressure-relief",
+      host: "source",
+      localPosition: [1.78, 0.24, 0.25],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.28,
+      holeDiameterScale: 0.4,
+      holeElevationMeters: 0.34,
+      wallThicknessMeters: 0.0032,
+      stressMultiplier: 1.22,
+    },
+  ],
+};
+
 export const LEVELS: readonly LevelDefinition[] = [
   FIRST_LEVEL,
   SECOND_LEVEL,
   THIRD_LEVEL,
+  FOURTH_LEVEL,
 ];
 
 export function validateLevelDefinition(level: LevelDefinition): string[] {
@@ -210,6 +296,21 @@ export function validateLevelDefinition(level: LevelDefinition): string[] {
     ids.add(target.id);
     if (target.holeDiameterScale <= 0) errors.push(`invalid diameter scale: ${target.id}`);
     if (target.wallThicknessMeters <= 0) errors.push(`invalid wall thickness: ${target.id}`);
+    if (target.host === "nested" && !level.nestedVessel?.enabled) {
+      errors.push(`nested target requires nested vessel: ${target.id}`);
+    }
+  }
+
+  if (level.nestedVessel) {
+    if (level.nestedVessel.radiusScene <= 0) errors.push("nested radius must be positive");
+    if (level.nestedVessel.baseMassKg <= 0) errors.push("nested base mass must be positive");
+    if (level.nestedVessel.fluidCapacityM3 <= 0) errors.push("nested fluid capacity must be positive");
+    if (
+      level.nestedVessel.initialFluidVolumeM3 < 0 ||
+      level.nestedVessel.initialFluidVolumeM3 > level.nestedVessel.fluidCapacityM3
+    ) {
+      errors.push("nested initial fluid volume must fit capacity");
+    }
   }
 
   return errors;

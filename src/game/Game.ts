@@ -22,6 +22,7 @@ import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/Tar
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
+import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
 import { FlowVisuals } from "./scene/FlowVisuals";
@@ -64,6 +65,7 @@ export class Game {
   private flowVisuals!: FlowVisuals;
   private breakVisuals!: GlassBreakVisuals;
   private jetVisual!: JetStreamVisual;
+  private nestedVessel!: NestedVesselRuntime;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
@@ -74,6 +76,7 @@ export class Game {
   private targetLocked = false;
   private lastPressurePa = 0;
   private lastOutflowM3 = 0;
+  private lastNestedOutflowM3 = 0;
   private pointerMotion = 0;
   private failed = false;
 
@@ -219,6 +222,13 @@ export class Game {
       this.scene,
     );
 
+    this.nestedVessel = new NestedVesselRuntime(
+      this.scene,
+      glass,
+      water,
+    );
+    this.nestedVessel.configure(this.level.nestedVessel);
+
     const innerFluid = MeshBuilder.CreateSphere(
       "inner-fluid",
       { diameter: 0.82, segments: 24 },
@@ -236,7 +246,13 @@ export class Game {
     this.createBasinCollision();
 
     for (const targetDefinition of this.level.targets) {
-      this.targets.push(new DrillTargetRuntime(this.scene, this.targetHost, targetDefinition));
+      this.targets.push(
+        new DrillTargetRuntime(
+          this.scene,
+          this.targetHostFor(targetDefinition.host),
+          targetDefinition,
+        ),
+      );
     }
 
     this.jetVisual = new JetStreamVisual(this.scene, water);
@@ -372,7 +388,7 @@ export class Game {
 
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       const target = this.targets.find(runtime => runtime.marker === pick?.pickedMesh);
-      if (!target || target.holeCreated) return;
+      if (!target || target.holeCreated || !target.isHeightAccessible) return;
 
       this.activeTarget = target;
       this.targetLocked = true;
@@ -410,30 +426,42 @@ export class Game {
     const targetAvailable =
       this.activeTarget !== null &&
       !this.activeTarget.holeCreated &&
+      this.activeTarget.isHeightAccessible &&
       !this.failed &&
       alignment >= 0.28;
 
     this.drill.step(dt, this.targetLocked && targetAvailable);
 
     const result = this.fluid.step(this.vessel, dt);
+    const nestedOutflowM3 = this.nestedVessel.stepFluid(dt);
     this.lastPressurePa = result.pressurePa;
-    this.lastOutflowM3 = result.outflowM3;
+    this.lastNestedOutflowM3 = nestedOutflowM3;
+    this.lastOutflowM3 = result.outflowM3 + nestedOutflowM3;
     this.receiverVolumeM3 = Math.min(
       this.level.receiverCapacityM3,
-      this.receiverVolumeM3 + result.outflowM3,
+      this.receiverVolumeM3 + result.outflowM3 + nestedOutflowM3,
     );
 
     this.pointerMotion *= Math.exp(-dt * 7.5);
 
     if (this.activeTarget && !this.activeTarget.holeCreated) {
-      this.simulateActiveTarget(this.activeTarget, alignment, result.pressurePa, dt);
+      const activePressurePa =
+        this.activeTarget.definition.effect === "nested-drain"
+          ? this.nestedVessel.pressurePa
+          : result.pressurePa;
+      this.simulateActiveTarget(this.activeTarget, alignment, activePressurePa, dt);
     }
 
     this.updateTargetVisuals();
     this.applyBuoyancy();
-    this.applyJetForce(result.outflowM3);
-    this.updateJetVisual(result.outflowM3, dt);
-    this.updateFlowVisuals(result.outflowM3, dt);
+    this.nestedVessel.applyHydrodynamics(this.receiverWaterSurfaceY);
+    const jetOutflowM3 =
+      this.latestOpenedTarget?.definition.effect === "nested-drain"
+        ? nestedOutflowM3
+        : result.outflowM3;
+    this.applyJetForce(jetOutflowM3);
+    this.updateJetVisual(jetOutflowM3, dt);
+    this.updateFlowVisuals(jetOutflowM3, dt);
     this.updateWaterVisuals();
 
     this.runtime.evaluate({
@@ -443,6 +471,8 @@ export class Game {
       receiverFill01: this.receiverFill,
       innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
       innerXScene: this.dynamicBody.transformNode.getAbsolutePosition().x,
+      secondaryHoleCreated: this.hasNestedDrain,
+      secondaryHeightScene: this.nestedVessel.heightScene,
     });
   }
 
@@ -490,11 +520,18 @@ export class Game {
 
       if (target.progress01 >= 1) {
         const diameter = this.selectedDiameter * target.definition.holeDiameterScale;
-        this.fluid.addHole(
-          this.vessel,
-          diameter,
-          target.definition.holeElevationMeters,
-        );
+        if (target.definition.effect === "nested-drain") {
+          this.nestedVessel.addDrain(
+            diameter,
+            target.definition.holeElevationMeters,
+          );
+        } else {
+          this.fluid.addHole(
+            this.vessel,
+            diameter,
+            target.definition.holeElevationMeters,
+          );
+        }
         target.holeCreated = true;
         this.latestOpenedTarget = target;
         this.targetLocked = false;
@@ -532,10 +569,14 @@ export class Game {
   private applyJetForce(outflowM3: number): void {
     if (!this.latestOpenedTarget || outflowM3 <= 0) return;
 
-    const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const direction = this.targetSurfaceNormal(this.latestOpenedTarget);
-    const jet = Math.min(1.35, outflowM3 * 420000);
+    if (this.latestOpenedTarget.definition.effect === "nested-drain") {
+      this.nestedVessel.applyJetReaction(direction, outflowM3);
+      return;
+    }
 
+    const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
+    const jet = Math.min(1.35, outflowM3 * 420000);
     this.dynamicBody.body.applyForce(
       direction.scale(jet).add(new Vector3(0, jet * 0.08, 0)),
       bodyPosition,
@@ -593,7 +634,11 @@ export class Game {
     this.targets.length = 0;
     for (const definition of this.level.targets) {
       this.targets.push(
-        new DrillTargetRuntime(this.scene, this.targetHost, definition),
+        new DrillTargetRuntime(
+          this.scene,
+          this.targetHostFor(definition.host),
+          definition,
+        ),
       );
     }
   }
@@ -616,6 +661,7 @@ export class Game {
     this.vessel.inletM3PerSecond = this.level.sourceInletM3PerSecond;
     this.vessel.holes.length = 0;
     this.receiverVolumeM3 = this.level.initialReceiverVolumeM3;
+    this.nestedVessel.configure(this.level.nestedVessel);
     this.diameterIndex = 1;
     this.targetLocked = false;
     this.activeTarget = null;
@@ -624,6 +670,7 @@ export class Game {
     this.runtime.reset();
     this.lastPressurePa = 0;
     this.lastOutflowM3 = 0;
+    this.lastNestedOutflowM3 = 0;
     this.pointerMotion = 0;
     this.targetHost.position.copyFrom(this.targetHostBasePosition);
 
@@ -699,7 +746,11 @@ export class Game {
       flowM3: this.lastOutflowM3,
       selectedTargetLabel:
         this.activeTarget?.definition.label ??
-        (this.hasPrimaryDrain ? "Main drain opened" : "Choose target"),
+        (this.hasNestedDrain
+          ? "Nested vessel released"
+          : this.hasPrimaryDrain
+            ? "Main drain opened"
+            : "Choose target"),
       sourceFill01: this.fluid.getFillRatio(this.vessel),
       receiverFill01: this.receiverFill,
       sourceVolumeM3: this.vessel.volumeM3,
@@ -707,8 +758,15 @@ export class Game {
       innerHeightScene: bodyPosition.y,
       innerXScene: bodyPosition.x,
       bodySpeedScenePerSecond: bodyVelocity.length(),
+      nestedEnabled: this.nestedVessel.enabled,
+      nestedHeightScene: this.nestedVessel.heightScene,
+      nestedFill01: this.nestedVessel.fill01,
       qualityTier: this.quality.tier,
     });
+  }
+
+  private targetHostFor(host: "source" | "nested" | undefined): Mesh {
+    return host === "nested" ? this.nestedVessel.mesh : this.targetHost;
   }
 
   private targetAlignment01(target: DrillTargetRuntime): number {
@@ -759,6 +817,14 @@ export class Game {
     return this.targets.some(
       target =>
         target.definition.effect === "primary-drain" &&
+        target.holeCreated,
+    );
+  }
+
+  private get hasNestedDrain(): boolean {
+    return this.targets.some(
+      target =>
+        target.definition.effect === "nested-drain" &&
         target.holeCreated,
     );
   }

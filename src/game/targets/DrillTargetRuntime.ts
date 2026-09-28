@@ -68,6 +68,11 @@ export class DrillTargetRuntime {
     this.resetMaterial();
   }
 
+  public get isHeightAccessible(): boolean {
+    const minHeight = this.definition.minHostHeightScene;
+    return minHeight === undefined || this.host.getAbsolutePosition().y >= minHeight;
+  }
+
   public alignment01(cameraPosition: Vector3): number {
     const targetPosition = this.marker.getAbsolutePosition();
     const approach = targetPosition.subtract(cameraPosition).normalize();
@@ -108,11 +113,25 @@ export class DrillTargetRuntime {
 
     if (failed || this.holeCreated) return;
 
+    if (!this.isHeightAccessible) {
+      this.material.alpha = 0.28;
+      this.material.diffuseColor = new Color3(0.22, 0.27, 0.3);
+      this.material.emissiveColor = new Color3(0.02, 0.03, 0.035);
+      return;
+    }
+
+    this.material.alpha = 0.82;
     if (this.definition.effect === "pressure-relief") {
       this.material.emissiveColor = new Color3(
         0.68 + reveal * 0.2,
         0.24 - reveal * 0.12,
         0.02,
+      );
+    } else if (this.definition.effect === "nested-drain") {
+      this.material.emissiveColor = new Color3(
+        0.42 + reveal * 0.25,
+        0.08,
+        0.72 - reveal * 0.28,
       );
     } else {
       this.material.emissiveColor = new Color3(
@@ -146,9 +165,13 @@ export class DrillTargetRuntime {
   }
 
   private resetMaterial(): void {
+    this.material.alpha = 0.82;
     if (this.definition.effect === "pressure-relief") {
       this.material.diffuseColor = new Color3(0.95, 0.52, 0.09);
       this.material.emissiveColor = new Color3(0.68, 0.24, 0.02);
+    } else if (this.definition.effect === "nested-drain") {
+      this.material.diffuseColor = new Color3(0.62, 0.18, 0.9);
+      this.material.emissiveColor = new Color3(0.42, 0.08, 0.72);
     } else {
       this.material.diffuseColor = new Color3(0.08, 0.8, 1);
       this.material.emissiveColor = new Color3(0.04, 0.6, 0.95);
