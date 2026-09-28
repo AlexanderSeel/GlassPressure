@@ -401,6 +401,7 @@ export class Game {
     this.updateTargetVisuals();
     this.applyBuoyancy();
     this.nestedVessel.applyHydrodynamics(this.receiverWaterSurfaceY);
+    this.applyReceiverCurrent(dt, transferredM3);
     const jetOutflowM3 =
       this.latestOpenedTarget?.definition.effect === "nested-drain"
         ? nestedOutflowM3
@@ -511,6 +512,27 @@ export class Game {
 
     const upward = new Vector3(0, Math.min(8, buoyancy), 0);
     this.dynamicBody.body.applyForce(upward.add(drag), bodyPosition);
+  }
+
+  private applyReceiverCurrent(dt: number, transferredM3: number): void {
+    if (transferredM3 <= 0) return;
+
+    const time = this.runtime.elapsedSeconds;
+    const transferRate = transferredM3 / Math.max(dt, 1 / 120);
+    const strength = Math.min(0.42, transferRate * 850);
+    const current = new Vector3(
+      Math.sin(time * 1.37) * strength,
+      0,
+      Math.cos(time * 1.11 + 0.6) * strength,
+    );
+
+    const primaryPosition =
+      this.dynamicBody.transformNode.getAbsolutePosition();
+    this.dynamicBody.body.applyForce(current, primaryPosition);
+
+    if (this.nestedVessel.enabled) {
+      this.nestedVessel.applyCurrentForce(current.scale(-0.72));
+    }
   }
 
   private applyJetForce(outflowM3: number): void {

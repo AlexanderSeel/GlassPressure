@@ -67,13 +67,22 @@ export const FIRST_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.0084,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.000026,
+  sourceInletM3PerSecond: 0.00022,
   initialReceiverVolumeM3: 0.008,
   receiverCapacityM3: 0.018,
   goal: {
     maxSourceFill01: 0.58,
     minReceiverFill01: 0.62,
     minInnerHeightScene: 2.02,
+  },
+  nestedVessel: {
+    enabled: true,
+    radiusScene: 0.48,
+    initialPosition: [-0.65, 1.35, 0.25],
+    baseMassKg: 0.1,
+    fluidCapacityM3: 0.00048,
+    initialFluidVolumeM3: 0.00005,
+    fluidHeightMeters: 0.085,
   },
   targets: [
     {
@@ -110,7 +119,7 @@ export const SECOND_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.0093,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.000041,
+  sourceInletM3PerSecond: 0.00028,
   initialReceiverVolumeM3: 0.0065,
   receiverCapacityM3: 0.018,
   goal: {
@@ -123,6 +132,15 @@ export const SECOND_LEVEL: LevelDefinition = {
     verticalAmplitudeScene: 0.09,
     frequencyHz: 0.19,
     phaseRadians: 0.7,
+  },
+  nestedVessel: {
+    enabled: true,
+    radiusScene: 0.48,
+    initialPosition: [-0.72, 1.28, -0.18],
+    baseMassKg: 0.1,
+    fluidCapacityM3: 0.00048,
+    initialFluidVolumeM3: 0.00005,
+    fluidHeightMeters: 0.085,
   },
   targets: [
     {
@@ -159,7 +177,7 @@ export const THIRD_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.009,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.000038,
+  sourceInletM3PerSecond: 0.00026,
   initialReceiverVolumeM3: 0.007,
   receiverCapacityM3: 0.018,
   goal: {
@@ -167,6 +185,15 @@ export const THIRD_LEVEL: LevelDefinition = {
     minReceiverFill01: 0.62,
     minInnerHeightScene: 2.02,
     minInnerXScene: 0.68,
+  },
+  nestedVessel: {
+    enabled: true,
+    radiusScene: 0.48,
+    initialPosition: [-0.6, 1.32, 0.28],
+    baseMassKg: 0.1,
+    fluidCapacityM3: 0.00048,
+    initialFluidVolumeM3: 0.00005,
+    fluidHeightMeters: 0.085,
   },
   targets: [
     {
@@ -216,7 +243,7 @@ export const FOURTH_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.0092,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.00004,
+  sourceInletM3PerSecond: 0.0003,
   initialReceiverVolumeM3: 0.0058,
   receiverCapacityM3: 0.018,
   goal: {
@@ -287,7 +314,7 @@ export const FIFTH_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.0094,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.000043,
+  sourceInletM3PerSecond: 0.00032,
   initialReceiverVolumeM3: 0.0068,
   receiverCapacityM3: 0.018,
   goal: {
@@ -309,6 +336,15 @@ export const FIFTH_LEVEL: LevelDefinition = {
     thicknessScene: 0.16,
     localY: -0.02,
     tiltRadians: 0.34,
+  },
+  nestedVessel: {
+    enabled: true,
+    radiusScene: 0.48,
+    initialPosition: [0.72, 1.3, -0.2],
+    baseMassKg: 0.1,
+    fluidCapacityM3: 0.00048,
+    initialFluidVolumeM3: 0.00005,
+    fluidHeightMeters: 0.085,
   },
   targets: [
     {
@@ -370,7 +406,7 @@ export const SIXTH_LEVEL: LevelDefinition = {
   initialSourceVolumeM3: 0.0096,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.52,
-  sourceInletM3PerSecond: 0.000047,
+  sourceInletM3PerSecond: 0.00034,
   initialReceiverVolumeM3: 0.0056,
   receiverCapacityM3: 0.018,
   goal: {
