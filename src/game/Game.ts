@@ -25,6 +25,7 @@ import { createGlassMaterial, createWaterMaterial, createWaterSurfaceMaterial } 
 import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
 import { createEnvironmentScene } from "./scene/EnvironmentScene";
 import { createBasinCollision } from "./scene/BasinCollision";
+import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { JetStreamVisual } from "./scene/JetStreamVisual";
@@ -35,8 +36,8 @@ import { resolveQualityPreset } from "./quality/QualitySettings";
 import { readQualityPreference, SettingsController } from "./ui/SettingsController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
-const RECEIVER_BASE_Y = 0.65;
-const RECEIVER_WATER_HEIGHT_SCENE = 1.45;
+const RECEIVER_BASE_Y = 0.2;
+const RECEIVER_WATER_HEIGHT_SCENE = 4.85;
 const INNER_RADIUS_SCENE = 0.575;
 const SCENE_TO_METERS = 0.1;
 const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
@@ -45,7 +46,7 @@ export class Game {
   private readonly engine: Engine;
   private readonly scene: Scene;
   private readonly runtime = new LevelRuntime(LEVELS);
-  private readonly targetHostBasePosition = new Vector3(0, 3.65, 0);
+  private readonly targetHostBasePosition = new Vector3(0, 2.9, 0);
   private readonly fluid = new FluidSystem();
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
@@ -72,6 +73,7 @@ export class Game {
   private breakVisuals!: GlassBreakVisuals;
   private jetVisual!: JetStreamVisual;
   private nestedVessel!: NestedVesselRuntime;
+  private sourceCupCollision: CupCollision | null = null;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
@@ -146,16 +148,16 @@ export class Game {
 
     const outer = MeshBuilder.CreateCylinder(
       "outer-vessel",
-      { diameter: 4.9, height: 1.7, tessellation: 64 },
+      { diameter: 5.5, height: 5.35, tessellation: 72 },
       this.scene,
     );
-    outer.position.y = 1.35;
+    outer.position.y = 2.78;
     outer.material = glass;
     outer.isPickable = false;
 
     const upper = MeshBuilder.CreateCylinder(
       "upper-vessel",
-      { diameter: 3.6, height: 1.25, tessellation: 64 },
+      { diameter: 3.8, height: 1.8, tessellation: 64 },
       this.scene,
     );
     upper.position.copyFrom(this.targetHostBasePosition);
@@ -191,7 +193,7 @@ export class Game {
     this.upperWaterSurface = new WaterSurfaceVisual(
       this.scene,
       "upper-water-surface",
-      1.66,
+      1.82,
       upperSurfaceMaterial,
       upper,
       64,
@@ -200,7 +202,7 @@ export class Game {
 
     this.receiverWaterMesh = MeshBuilder.CreateCylinder(
       "receiver-water",
-      { diameter: 4.55, height: 1, tessellation: 64 },
+      { diameter: 5.1, height: 1, tessellation: 72 },
       this.scene,
     );
     this.receiverWaterMesh.material = water;
@@ -210,7 +212,7 @@ export class Game {
     this.receiverWaterSurface = new WaterSurfaceVisual(
       this.scene,
       "receiver-water-surface",
-      2.24,
+      2.5,
       receiverSurfaceMaterial,
       null,
       72,
@@ -222,7 +224,7 @@ export class Game {
       { diameter: INNER_RADIUS_SCENE * 2, segments: 32 },
       this.scene,
     );
-    inner.position = new Vector3(0.45, 1.75, 0);
+    inner.position = new Vector3(...(this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0]));
     inner.material = glass;
     this.dynamicBody = new PhysicsAggregate(
       inner,
@@ -253,6 +255,7 @@ export class Game {
     innerFluid.material = innerWater;
 
     createBasinCollision(this.scene, RECEIVER_BASE_Y);
+    this.configureSourceCupCollision();
 
     for (const targetDefinition of this.level.targets) {
       this.targets.push(
@@ -435,7 +438,9 @@ export class Game {
 
     this.updateTargetVisuals();
     this.applyBuoyancy();
-    this.nestedVessel.applyHydrodynamics(this.receiverWaterSurfaceY);
+    this.nestedVessel.applyHydrodynamics(
+      this.waterSurfaceForBody(this.nestedVessel.position),
+    );
     this.applyReceiverCurrent(dt, transferredM3);
     const jetOutflowM3 =
       this.latestOpenedTarget?.definition.effect === "nested-drain"
@@ -456,6 +461,7 @@ export class Game {
       innerXScene: this.dynamicBody.transformNode.getAbsolutePosition().x,
       secondaryHoleCreated: this.hasNestedDrain,
       secondaryHeightScene: this.nestedVessel.heightScene,
+      secondaryEscaped: this.nestedVesselEscaped,
     });
   }
 
@@ -532,7 +538,8 @@ export class Game {
   private applyBuoyancy(): void {
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const sphereBottomY = bodyPosition.y - INNER_RADIUS_SCENE;
-    const immersionScene = Math.max(0, this.receiverWaterSurfaceY - sphereBottomY);
+    const waterSurfaceY = this.waterSurfaceForBody(bodyPosition);
+    const immersionScene = Math.max(0, waterSurfaceY - sphereBottomY);
     const immersionMeters = immersionScene * SCENE_TO_METERS;
 
     const submergedVolume = submergedSphereVolume(INNER_RADIUS_METERS, immersionMeters);
@@ -618,9 +625,9 @@ export class Game {
     transferredM3 = 0,
   ): void {
     const upperFill = this.fluid.getFillRatio(this.vessel);
-    const upperHeight = 0.03 + upperFill * 1.02;
+    const upperHeight = 0.04 + upperFill * 1.68;
     this.upperWaterMesh.scaling.y = upperHeight;
-    this.upperWaterMesh.position.y = -0.59 + upperHeight * 0.5;
+    this.upperWaterMesh.position.y = -0.86 + upperHeight * 0.5;
 
     const lowerHeight = Math.max(
       0.025,
@@ -635,7 +642,7 @@ export class Game {
     const bodyAgitation = Math.min(1, bodyVelocity.length() * 0.45);
 
     this.upperWaterSurface.update({
-      surfaceY: -0.59 + upperHeight,
+      surfaceY: -0.86 + upperHeight,
       fill01: upperFill,
       agitation01: Math.min(
         1,
@@ -712,6 +719,7 @@ export class Game {
     this.targetHost.position.copyFrom(this.targetHostBasePosition);
     this.targetHost.rotation.copyFromFloats(0, 0, 0);
     this.configureSourceRing();
+    this.configureSourceCupCollision();
 
     for (const target of this.targets) {
       target.reset();
@@ -721,11 +729,32 @@ export class Game {
     this.flowVisuals.reset();
     this.breakVisuals.clear();
 
-    this.dynamicBody.transformNode.position.copyFromFloats(0.45, 1.75, 0);
+    this.dynamicBody.transformNode.position.copyFromFloats(
+      ...(this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0]),
+    );
     this.dynamicBody.body.setLinearVelocity(Vector3.Zero());
     this.dynamicBody.body.setAngularVelocity(Vector3.Zero());
 
     this.updateWaterVisuals();
+  }
+
+  private configureSourceCupCollision(): void {
+    if (this.sourceCupCollision) {
+      for (const aggregate of this.sourceCupCollision.aggregates) aggregate.dispose();
+      for (const mesh of this.sourceCupCollision.meshes) mesh.dispose();
+      this.sourceCupCollision = null;
+    }
+
+    if (!this.level.nestedAssembly) return;
+
+    this.sourceCupCollision = createOpenCupCollision(
+      this.scene,
+      "parent-cup",
+      this.targetHostBasePosition,
+      1.74,
+      1.76,
+      16,
+    );
   }
 
   private configureSourceRing(): void {
@@ -857,6 +886,35 @@ export class Game {
 
   private get receiverWaterSurfaceY(): number {
     return RECEIVER_BASE_Y + this.receiverFill * RECEIVER_WATER_HEIGHT_SCENE;
+  }
+
+  private get sourceWaterSurfaceY(): number {
+    const upperFill = this.fluid.getFillRatio(this.vessel);
+    return this.targetHost.getAbsolutePosition().y - 0.88 + upperFill * 1.72;
+  }
+
+  private waterSurfaceForBody(position: Vector3): number {
+    const cup = this.sourceCupCollision;
+    if (!cup) return this.receiverWaterSurfaceY;
+
+    const host = this.targetHost.getAbsolutePosition();
+    const radial = Math.hypot(position.x - host.x, position.z - host.z);
+    const stillInsideCup =
+      radial < cup.innerRadius - 0.08 &&
+      position.y < cup.rimY + 0.62 &&
+      position.y > cup.bottomY - 0.3;
+
+    return stillInsideCup ? this.sourceWaterSurfaceY : this.receiverWaterSurfaceY;
+  }
+
+  private get nestedVesselEscaped(): boolean {
+    const cup = this.sourceCupCollision;
+    if (!cup || !this.nestedVessel.enabled) return false;
+
+    const host = this.targetHost.getAbsolutePosition();
+    const position = this.nestedVessel.position;
+    const radial = Math.hypot(position.x - host.x, position.z - host.z);
+    return radial > cup.innerRadius + 0.28 || position.y < cup.bottomY - 0.35;
   }
 
   private get pressureReliefOpen(): boolean {

@@ -1,4 +1,5 @@
 import {
+  Mesh,
   MeshBuilder,
   PhysicsAggregate,
   PhysicsShapeType,
@@ -6,15 +7,17 @@ import {
   Vector3,
 } from "@babylonjs/core";
 
-const BASIN_INNER_RADIUS = 2.27;
-const WALL_HEIGHT = 1.72;
+const BASIN_INNER_RADIUS = 2.62;
+const WALL_HEIGHT = 5.25;
 const WALL_THICKNESS = 0.16;
-const WALL_SEGMENTS = 16;
+const WALL_SEGMENTS = 20;
 
 export function createBasinCollision(
   scene: Scene,
   baseY: number,
-): void {
+): Mesh[] {
+  const meshes: Mesh[] = [];
+
   const basinFloor = MeshBuilder.CreateCylinder(
     "basin-floor-collider",
     {
@@ -27,6 +30,7 @@ export function createBasinCollision(
   basinFloor.position.y = baseY - 0.09;
   basinFloor.visibility = 0;
   basinFloor.isPickable = false;
+  meshes.push(basinFloor);
   new PhysicsAggregate(
     basinFloor,
     PhysicsShapeType.CYLINDER,
@@ -35,7 +39,7 @@ export function createBasinCollision(
   );
 
   const circumference = Math.PI * BASIN_INNER_RADIUS * 2;
-  const segmentWidth = circumference / WALL_SEGMENTS * 1.08;
+  const segmentWidth = (circumference / WALL_SEGMENTS) * 1.08;
   const wallCenterY = baseY + WALL_HEIGHT * 0.5;
 
   for (let i = 0; i < WALL_SEGMENTS; i += 1) {
@@ -58,6 +62,7 @@ export function createBasinCollision(
     wall.rotation.y = angle;
     wall.visibility = 0;
     wall.isPickable = false;
+    meshes.push(wall);
 
     new PhysicsAggregate(
       wall,
@@ -70,4 +75,6 @@ export function createBasinCollision(
       scene,
     );
   }
+
+  return meshes;
 }

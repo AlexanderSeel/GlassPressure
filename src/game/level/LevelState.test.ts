@@ -61,4 +61,37 @@ describe("LevelState", () => {
       secondaryHeightScene: 2.8,
     }, goal)).toBe("won");
   });
+
+  it("can require the nested vessel to escape its parent cup", () => {
+    const goal = {
+      maxSourceFill01: 1,
+      minReceiverFill01: 0.05,
+      minInnerHeightScene: 2,
+      requireSecondaryHole: true,
+      minSecondaryHeightScene: 3,
+      requireSecondaryEscaped: true,
+    };
+
+    expect(evaluateLevel({
+      glassFailed: false,
+      holeCreated: true,
+      secondaryHoleCreated: true,
+      secondaryEscaped: false,
+      sourceFill01: 0.7,
+      receiverFill01: 0.2,
+      innerHeightScene: 3,
+      secondaryHeightScene: 3.3,
+    }, goal)).toBe("playing");
+
+    expect(evaluateLevel({
+      glassFailed: false,
+      holeCreated: true,
+      secondaryHoleCreated: true,
+      secondaryEscaped: true,
+      sourceFill01: 0.7,
+      receiverFill01: 0.2,
+      innerHeightScene: 3,
+      secondaryHeightScene: 3.3,
+    }, goal)).toBe("won");
+  });
 });

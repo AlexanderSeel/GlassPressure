@@ -56,58 +56,82 @@ export type LevelDefinition = {
   goal: LevelGoal;
   hostMotion?: HostMotionDefinition;
   sourceRing?: SourceRingDefinition;
+  nestedAssembly?: boolean;
+  primaryBodyInitialPosition?: readonly [number, number, number];
   nestedVessel?: NestedVesselDefinition;
   targets: readonly DrillTargetDefinition[];
 };
 
 export const FIRST_LEVEL: LevelDefinition = {
-  id: "pressure-lesson",
-  name: "Pressure Lesson",
-  objective: "Drain the upper vessel, fill the receiver and lift the inner vessel.",
-  initialSourceVolumeM3: 0.0084,
+  id: "nested-lift",
+  name: "Nested Lift",
+  objective:
+    "Let the parent cup fill, drill its transfer port, then catch the rising inner glass body and drill it before the flow washes it over the rim.",
+  initialSourceVolumeM3: 0.006,
   sourceCapacityM3: 0.012,
-  sourceHeightMeters: 0.52,
+  sourceHeightMeters: 0.72,
   sourceInletM3PerSecond: 0.00022,
-  initialReceiverVolumeM3: 0.008,
-  receiverCapacityM3: 0.018,
+  initialReceiverVolumeM3: 0.0012,
+  receiverCapacityM3: 0.032,
   goal: {
-    maxSourceFill01: 0.58,
-    minReceiverFill01: 0.62,
-    minInnerHeightScene: 2.02,
+    maxSourceFill01: 1,
+    minReceiverFill01: 0.08,
+    minInnerHeightScene: 2.8,
+    requireSecondaryHole: true,
+    minSecondaryHeightScene: 3.15,
+    requireSecondaryEscaped: true,
   },
+  nestedAssembly: true,
+  primaryBodyInitialPosition: [0.58, 2.35, 0.05],
   nestedVessel: {
     enabled: true,
     radiusScene: 0.48,
-    initialPosition: [-0.65, 1.35, 0.25],
-    baseMassKg: 0.1,
+    initialPosition: [-0.58, 2.34, -0.05],
+    baseMassKg: 0.13,
     fluidCapacityM3: 0.00048,
-    initialFluidVolumeM3: 0.00005,
+    initialFluidVolumeM3: 0.00034,
     fluidHeightMeters: 0.085,
   },
   targets: [
     {
-      id: "main-drain",
-      label: "Main drain",
+      id: "parent-transfer-port",
+      label: "Parent transfer port",
       effect: "primary-drain",
-      localPosition: [0, 0.03, -1.82],
+      host: "source",
+      localPosition: [0, -0.18, -1.86],
       localRotation: [Math.PI / 2, 0, 0],
-      markerDiameterScene: 0.56,
-      holeDiameterScale: 1,
-      holeElevationMeters: 0.08,
-      wallThicknessMeters: 0.004,
-      stressMultiplier: 1,
+      markerDiameterScene: 0.38,
+      holeDiameterScale: 0.72,
+      holeElevationMeters: 0.11,
+      wallThicknessMeters: 0.0038,
+      stressMultiplier: 1.08,
     },
     {
-      id: "relief-vent",
-      label: "Pressure relief",
-      effect: "pressure-relief",
-      localPosition: [1.82, 0.2, 0],
-      localRotation: [Math.PI / 2, Math.PI / 2, 0],
-      markerDiameterScene: 0.43,
-      holeDiameterScale: 0.45,
-      holeElevationMeters: 0.31,
-      wallThicknessMeters: 0.0035,
+      id: "inner-release-port",
+      label: "Inner release port",
+      effect: "nested-drain",
+      host: "nested",
+      minHostHeightScene: 3.05,
+      localPosition: [0, -0.03, -0.49],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.3,
+      holeDiameterScale: 0.68,
+      holeElevationMeters: 0.012,
+      wallThicknessMeters: 0.003,
       stressMultiplier: 1.16,
+    },
+    {
+      id: "parent-relief",
+      label: "Parent pressure relief",
+      effect: "pressure-relief",
+      host: "source",
+      localPosition: [1.86, 0.27, 0],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.27,
+      holeDiameterScale: 0.34,
+      holeElevationMeters: 0.48,
+      wallThicknessMeters: 0.0032,
+      stressMultiplier: 1.2,
     },
   ],
 };
@@ -531,6 +555,10 @@ export function validateLevelDefinition(level: LevelDefinition): string[] {
     if (target.host === "nested" && !level.nestedVessel?.enabled) {
       errors.push(`nested target requires nested vessel: ${target.id}`);
     }
+  }
+
+  if (level.nestedAssembly && !level.nestedVessel?.enabled) {
+    errors.push("nested assembly requires an enabled nested vessel");
   }
 
   if (level.sourceRing) {

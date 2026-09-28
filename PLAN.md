@@ -165,14 +165,33 @@ Planned tools:
 - [ ] browser matrix
 - [ ] deployment pipeline
 
+## Concept fidelity reset — 2026-09-28
+
+The previous prototype drifted too far toward a two-tank routing game. That is no longer the design reference for Level 1.
+
+The canonical first-level loop is now:
+
+1. A **single tall outer glass chamber** contains a smaller open parent cup.
+2. Two physical glass bodies begin **inside that parent cup**, not in a separate receiver display.
+3. Water enters the parent cup continuously from above.
+4. As the water level rises, the nested bodies become buoyant, contact each other and contact the cup walls.
+5. The player drills a marked transfer port in the parent glass to alter how quickly water escapes into the surrounding chamber.
+6. The inner glass body rises into a reachable window; its own colored drill region becomes usable only then.
+7. Drilling the inner body releases trapped water/weight.
+8. Continued filling, buoyancy, current and body contact push the inner body over the parent rim.
+9. Once clear of the rim it drops/moves into the surrounding chamber. **That escape is the Level 1 success condition.**
+
+This nested-lift/escape sequence is the product-defining vertical slice. Later routing, rotating-ring and pressure experiments remain useful systems, but they must not replace this core fantasy.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
 The first vertical slice now includes a deterministic fluid model, fixed-step timing, Havok rigid-body physics, submerged-volume buoyancy, a visible drill, alignment/steadiness-sensitive drilling, local glass stress, cracking/failure, replay/reset, live telemetry and directional flow feedback.
 
-The first two levels are now data-driven. Level 1 has two drillable regions:
-- **Main drain** — larger effective opening, lower on the vessel, best for moving significant water.
-- **Pressure relief** — smaller high opening that can reduce pressure with lower transferred volume, giving the player a safer preparatory option before drilling the main outlet.
+Level 1 is being rebuilt as `Nested Lift`, the canonical original-game vertical slice. Earlier two-tank routing behavior is retained only as supporting technology for later levels. The Level 1 drill sequence now centers on a parent-cup transfer port and an inner-vessel release port:
+- **Parent transfer port** — controls transfer from the inner parent cup into the surrounding chamber.
+- **Inner release port** — appears on the rising nested glass body and changes its trapped-water weight.
+- **Parent pressure relief** — optional safer pressure-management route.
 
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
@@ -181,12 +200,13 @@ Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves
 Current interaction usability: the thin torus is no longer the only pickable geometry. Each target now has a full circular hit patch, hover feedback/cursor change, an in-world radial progress fill and a HUD progress bar/percentage so the player can see drilling progress immediately.
 
 ## Next implementation batch
-1. [x] Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
-2. [x] Add bounded fragment lifetime/recycling before allowing multiple break events in one level.
-3. [x] Add a persisted Auto/Low/Medium/High quality override in the settings shell.
-4. [x] Extract static scene/chamber construction from `Game.ts` now that multiple dynamic vessel types exist.
-5. [x] Add level 5 around rotating collar geometry and a central routing band.
-6. [x] Add level 6 as a composite handcrafted challenge using rotation, pressure relief, nested buoyancy and routing constraints.
-7. Generalize nested-vessel collision geometry beyond the current fixed spherical proxy before procedural/non-spherical nested bodies depend on it.
-8. [x] Add dynamic surface meshes/slosh above the authoritative compartment volumes; retain the lower-opacity volume body underneath for depth.
-9. Add contact/debug visualization toggle for collision proxies, body velocities and buoyancy forces.
+1. [x] Rebuild Level 1 around one tall chamber + open parent cup + nested physical bodies.
+2. [x] Add parent-cup Havok floor/wall collision so nested bodies can rise inside it and clear the rim.
+3. [x] Use parent-cup water height for buoyancy while a body is inside the cup, then surrounding-chamber water after escape.
+4. [x] Make Level 1 require drilling the inner nested body and physically escaping the parent cup.
+5. Add a third nested glass object with a different visual shape so Level 1 demonstrates a true multi-layer nest, not only two bodies.
+6. Replace the spherical nested visuals with open glass cup/bulb forms while retaining stable collision proxies.
+7. Add visual water transfer from parent cup overflow/holes into the surrounding chamber at the actual transfer locations.
+8. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
+9. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
+10. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

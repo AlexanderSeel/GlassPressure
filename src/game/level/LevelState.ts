@@ -9,6 +9,7 @@ export type LevelSnapshot = {
   innerXScene?: number;
   secondaryHoleCreated?: boolean;
   secondaryHeightScene?: number;
+  secondaryEscaped?: boolean;
 };
 
 export type LevelGoal = {
@@ -19,6 +20,7 @@ export type LevelGoal = {
   maxInnerXScene?: number;
   requireSecondaryHole?: boolean;
   minSecondaryHeightScene?: number;
+  requireSecondaryEscaped?: boolean;
 };
 
 export const FIRST_LEVEL_GOAL: LevelGoal = {
@@ -42,7 +44,8 @@ export function evaluateLevel(
     (!goal.requireSecondaryHole || snapshot.secondaryHoleCreated === true) &&
     (goal.minSecondaryHeightScene === undefined ||
       (snapshot.secondaryHeightScene ?? Number.NEGATIVE_INFINITY) >=
-        goal.minSecondaryHeightScene);
+        goal.minSecondaryHeightScene) &&
+    (!goal.requireSecondaryEscaped || snapshot.secondaryEscaped === true);
 
   const complete =
     snapshot.holeCreated &&

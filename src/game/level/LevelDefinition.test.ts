@@ -17,9 +17,12 @@ describe("LevelDefinition", () => {
     }
   });
 
-  it("contains both a main drain and pressure-relief route in level one", () => {
+  it("makes level one prove the original nested-lift concept", () => {
+    expect(FIRST_LEVEL.nestedAssembly).toBe(true);
+    expect(FIRST_LEVEL.goal.requireSecondaryHole).toBe(true);
+    expect(FIRST_LEVEL.goal.requireSecondaryEscaped).toBe(true);
     expect(FIRST_LEVEL.targets.some(target => target.effect === "primary-drain")).toBe(true);
-    expect(FIRST_LEVEL.targets.some(target => target.effect === "pressure-relief")).toBe(true);
+    expect(FIRST_LEVEL.targets.some(target => target.effect === "nested-drain")).toBe(true);
   });
 
   it("makes level two a moving, tighter challenge", () => {
