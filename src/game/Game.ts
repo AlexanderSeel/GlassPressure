@@ -21,7 +21,8 @@ import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
-import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
+import { createGlassMaterial, createWaterMaterial, createWaterSurfaceMaterial } from "./scene/materials";
+import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
 import { createEnvironmentScene } from "./scene/EnvironmentScene";
 import { createBasinCollision } from "./scene/BasinCollision";
 import { FlowVisuals } from "./scene/FlowVisuals";
@@ -61,6 +62,8 @@ export class Game {
   private vessel!: FluidCompartment;
   private upperWaterMesh!: Mesh;
   private receiverWaterMesh!: Mesh;
+  private upperWaterSurface!: WaterSurfaceVisual;
+  private receiverWaterSurface!: WaterSurfaceVisual;
   private dynamicBody!: PhysicsAggregate;
   private targetHost!: Mesh;
   private sourceRing!: Mesh;
@@ -132,6 +135,14 @@ export class Game {
       this.quality.glassRefractionIntensity,
     );
     const water = createWaterMaterial("water", this.scene);
+    const upperSurfaceMaterial = createWaterSurfaceMaterial(
+      "upper-water-surface-material",
+      this.scene,
+    );
+    const receiverSurfaceMaterial = createWaterSurfaceMaterial(
+      "receiver-water-surface-material",
+      this.scene,
+    );
 
     const outer = MeshBuilder.CreateCylinder(
       "outer-vessel",
@@ -175,6 +186,17 @@ export class Game {
     this.upperWaterMesh.position.y = -0.25;
     this.upperWaterMesh.material = water;
     this.upperWaterMesh.isPickable = false;
+    this.upperWaterMesh.visibility = 0.5;
+
+    this.upperWaterSurface = new WaterSurfaceVisual(
+      this.scene,
+      "upper-water-surface",
+      1.66,
+      upperSurfaceMaterial,
+      upper,
+      64,
+      0.035,
+    );
 
     this.receiverWaterMesh = MeshBuilder.CreateCylinder(
       "receiver-water",
@@ -183,6 +205,17 @@ export class Game {
     );
     this.receiverWaterMesh.material = water;
     this.receiverWaterMesh.isPickable = false;
+    this.receiverWaterMesh.visibility = 0.48;
+
+    this.receiverWaterSurface = new WaterSurfaceVisual(
+      this.scene,
+      "receiver-water-surface",
+      2.24,
+      receiverSurfaceMaterial,
+      null,
+      72,
+      0.055,
+    );
 
     const inner = MeshBuilder.CreateSphere(
       "inner-vessel",
@@ -412,7 +445,7 @@ export class Game {
     this.updateJetVisual(jetOutflowM3, dt);
     this.updateFlowVisuals(jetOutflowM3, dt);
     this.breakVisuals.update(dt);
-    this.updateWaterVisuals();
+    this.updateWaterVisuals(dt, transferredM3);
 
     this.runtime.evaluate({
       glassFailed: this.failed,
@@ -580,7 +613,10 @@ export class Game {
     );
   }
 
-  private updateWaterVisuals(): void {
+  private updateWaterVisuals(
+    dt = 1 / 60,
+    transferredM3 = 0,
+  ): void {
     const upperFill = this.fluid.getFillRatio(this.vessel);
     const upperHeight = 0.03 + upperFill * 1.02;
     this.upperWaterMesh.scaling.y = upperHeight;
@@ -592,6 +628,35 @@ export class Game {
     );
     this.receiverWaterMesh.scaling.y = lowerHeight;
     this.receiverWaterMesh.position.y = RECEIVER_BASE_Y + lowerHeight * 0.5;
+
+    const bodyVelocity = this.dynamicBody.body.getLinearVelocity();
+    const transferRate = transferredM3 / Math.max(dt, 1 / 120);
+    const transferAgitation = Math.min(1, transferRate * 2600);
+    const bodyAgitation = Math.min(1, bodyVelocity.length() * 0.45);
+
+    this.upperWaterSurface.update({
+      surfaceY: -0.59 + upperHeight,
+      fill01: upperFill,
+      agitation01: Math.min(
+        1,
+        0.12 + this.vessel.inletM3PerSecond * 1800 + this.lastOutflowM3 * 2200,
+      ),
+      velocityX: 0,
+      velocityZ: 0,
+      timeSeconds: this.runtime.elapsedSeconds,
+    });
+
+    this.receiverWaterSurface.update({
+      surfaceY: RECEIVER_BASE_Y + lowerHeight,
+      fill01: this.receiverFill,
+      agitation01: Math.min(
+        1,
+        transferAgitation * 0.72 + bodyAgitation * 0.48,
+      ),
+      velocityX: bodyVelocity.x,
+      velocityZ: bodyVelocity.z,
+      timeSeconds: this.runtime.elapsedSeconds,
+    });
   }
 
   private nextLevel(): void {
