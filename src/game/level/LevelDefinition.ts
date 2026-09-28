@@ -129,9 +129,66 @@ export const SECOND_LEVEL: LevelDefinition = {
   ],
 };
 
+export const THIRD_LEVEL: LevelDefinition = {
+  id: "jet-routing",
+  name: "Jet Routing",
+  objective: "Drain and lift the inner vessel into the right-side routing zone.",
+  initialSourceVolumeM3: 0.009,
+  sourceCapacityM3: 0.012,
+  sourceHeightMeters: 0.52,
+  sourceInletM3PerSecond: 0.000038,
+  initialReceiverVolumeM3: 0.007,
+  receiverCapacityM3: 0.018,
+  goal: {
+    maxSourceFill01: 0.56,
+    minReceiverFill01: 0.62,
+    minInnerHeightScene: 2.02,
+    minInnerXScene: 0.68,
+  },
+  targets: [
+    {
+      id: "route-right",
+      label: "Right routing drain",
+      effect: "primary-drain",
+      localPosition: [1.82, -0.1, 0],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.34,
+      holeDiameterScale: 0.82,
+      holeElevationMeters: 0.11,
+      wallThicknessMeters: 0.0036,
+      stressMultiplier: 1.1,
+    },
+    {
+      id: "fast-left",
+      label: "Fast left drain",
+      effect: "primary-drain",
+      localPosition: [-1.82, -0.18, 0],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.4,
+      holeDiameterScale: 1.18,
+      holeElevationMeters: 0.08,
+      wallThicknessMeters: 0.0038,
+      stressMultiplier: 1.06,
+    },
+    {
+      id: "routing-relief",
+      label: "Routing relief",
+      effect: "pressure-relief",
+      localPosition: [0.2, 0.28, -1.8],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.3,
+      holeDiameterScale: 0.38,
+      holeElevationMeters: 0.35,
+      wallThicknessMeters: 0.0032,
+      stressMultiplier: 1.24,
+    },
+  ],
+};
+
 export const LEVELS: readonly LevelDefinition[] = [
   FIRST_LEVEL,
   SECOND_LEVEL,
+  THIRD_LEVEL,
 ];
 
 export function validateLevelDefinition(level: LevelDefinition): string[] {

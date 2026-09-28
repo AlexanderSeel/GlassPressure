@@ -447,6 +447,7 @@ export class Game {
           sourceFill01: this.fluid.getFillRatio(this.vessel),
           receiverFill01: this.receiverFill,
           innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
+          innerXScene: this.dynamicBody.transformNode.getAbsolutePosition().x,
         },
         this.level.goal,
       );
@@ -727,6 +728,7 @@ export class Game {
       sourceVolumeM3: this.vessel.volumeM3,
       hydraulicHeadMeters: this.hydraulicHeadMeters,
       innerHeightScene: bodyPosition.y,
+      innerXScene: bodyPosition.x,
       bodySpeedScenePerSecond: bodyVelocity.length(),
       qualityTier: this.quality.tier,
     });

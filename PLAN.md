@@ -129,7 +129,7 @@ Planned tools:
 - [x] data-driven drill target definitions
 - [ ] level selection
 - [ ] save progress
-- [ ] six handcrafted levels (2 implemented)
+- [ ] six handcrafted levels (3 implemented)
 
 ### M5 — Visual identity
 - [ ] production glass strategy
@@ -175,12 +175,12 @@ The first two levels are now data-driven. Level 1 has two drillable regions:
 
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
-Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity, pooled flow-particle budget and bounded glass-fragment count without changing gameplay physics. Catastrophic target failure now spawns a small authored set of Havok-driven local fragments rather than attempting arbitrary runtime mesh fracture. The old rigid jet cylinder has been replaced by a tapered, flow-pulsed stream renderer with a receiver splash ring. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals now live in a dedicated `DrillTargetRuntime` module instead of the main game class. HUD DOM binding/rendering is isolated in `HudController`, so gameplay code only publishes telemetry snapshots.
+Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. Level 3 (`Jet Routing`) adds two competing primary drains on opposite sides and requires the inner vessel to finish in a positive-X routing zone; the faster drain can therefore be the strategically wrong choice. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity, pooled flow-particle budget and bounded glass-fragment count without changing gameplay physics. Catastrophic target failure now spawns a small authored set of Havok-driven local fragments rather than attempting arbitrary runtime mesh fracture. The old rigid jet cylinder has been replaced by a tapered, flow-pulsed stream renderer with a receiver splash ring. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals now live in a dedicated `DrillTargetRuntime` module instead of the main game class. HUD DOM binding/rendering is isolated in `HudController`, so gameplay code only publishes telemetry snapshots.
 
 ## Next implementation batch
 1. Continue splitting `Game.ts`: move level runtime/state transitions out next; target runtime and HUD are isolated.
 2. Add contained-water mass coupling once a dynamic vessel owns a drainable compartment.
-3. Add level 3 with an asymmetrical vessel/target layout and a stronger jet-routing requirement.
-4. Add a manual quality override in settings after the settings/menu shell exists.
-5. Add fragment lifetime/pooling before allowing multiple break events in one level.
-6. Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
+3. Add a manual quality override in settings after the settings/menu shell exists.
+4. Add fragment lifetime/pooling before allowing multiple break events in one level.
+5. Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
+6. Add level 4 with two nested dynamic vessels and target accessibility changing through buoyancy.

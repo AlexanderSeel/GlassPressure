@@ -17,6 +17,7 @@ export type HudSnapshot = {
   sourceVolumeM3: number;
   hydraulicHeadMeters: number;
   innerHeightScene: number;
+  innerXScene: number;
   bodySpeedScenePerSecond: number;
   qualityTier: string;
 };
@@ -35,6 +36,7 @@ export class HudController {
     sourceVolume: this.byId("source-volume"),
     hydraulicHead: this.byId("hydraulic-head"),
     innerHeight: this.byId("inner-height"),
+    innerX: this.byId("inner-x"),
     bodyVelocity: this.byId("body-velocity"),
     selectedTarget: this.byId("selected-target"),
     quality: this.byId("quality-tier"),
@@ -73,6 +75,7 @@ export class HudController {
       `${snapshot.hydraulicHeadMeters.toFixed(2)} m`;
     this.elements.innerHeight.textContent =
       `${snapshot.innerHeightScene.toFixed(2)} m`;
+    this.elements.innerX.textContent = `${snapshot.innerXScene.toFixed(2)} m`;
     this.elements.bodyVelocity.textContent =
       `${snapshot.bodySpeedScenePerSecond.toFixed(2)} m/s`;
     this.elements.quality.textContent = snapshot.qualityTier.toUpperCase();

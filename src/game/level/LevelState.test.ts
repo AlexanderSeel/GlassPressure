@@ -31,4 +31,31 @@ describe("LevelState", () => {
       innerHeightScene: 2.2,
     })).toBe("won");
   });
+
+  it("can require lateral routing of the inner vessel", () => {
+    const goal = {
+      maxSourceFill01: 0.6,
+      minReceiverFill01: 0.6,
+      minInnerHeightScene: 2,
+      minInnerXScene: 0.7,
+    };
+
+    expect(evaluateLevel({
+      glassFailed: false,
+      holeCreated: true,
+      sourceFill01: 0.5,
+      receiverFill01: 0.7,
+      innerHeightScene: 2.2,
+      innerXScene: 0.4,
+    }, goal)).toBe("playing");
+
+    expect(evaluateLevel({
+      glassFailed: false,
+      holeCreated: true,
+      sourceFill01: 0.5,
+      receiverFill01: 0.7,
+      innerHeightScene: 2.2,
+      innerXScene: 0.8,
+    }, goal)).toBe("won");
+  });
 });

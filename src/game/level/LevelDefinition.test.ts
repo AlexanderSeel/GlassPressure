@@ -3,6 +3,7 @@ import {
   FIRST_LEVEL,
   LEVELS,
   SECOND_LEVEL,
+  THIRD_LEVEL,
   validateLevelDefinition,
 } from "./LevelDefinition";
 
@@ -26,5 +27,12 @@ describe("LevelDefinition", () => {
     expect(SECOND_LEVEL.targets[0]?.markerDiameterScene).toBeLessThan(
       FIRST_LEVEL.targets[0]?.markerDiameterScene ?? Infinity,
     );
+  });
+
+  it("makes level three require lateral jet routing", () => {
+    expect(THIRD_LEVEL.goal.minInnerXScene).toBeGreaterThan(0);
+    expect(
+      THIRD_LEVEL.targets.filter(target => target.effect === "primary-drain"),
+    ).toHaveLength(2);
   });
 });
