@@ -165,6 +165,20 @@ export class Game {
     upper.isPickable = false;
     this.targetHost = upper;
 
+    const parentRim = MeshBuilder.CreateTorus(
+      "parent-cup-rim",
+      {
+        diameter: 3.8,
+        thickness: 0.075,
+        tessellation: 64,
+      },
+      this.scene,
+    );
+    parentRim.parent = upper;
+    parentRim.position.y = 0.9;
+    parentRim.material = glass;
+    parentRim.isPickable = false;
+
     this.sourceRing = MeshBuilder.CreateTorus(
       "source-rotating-ring",
       {
@@ -220,12 +234,44 @@ export class Game {
     );
 
     const inner = MeshBuilder.CreateSphere(
-      "inner-vessel",
-      { diameter: INNER_RADIUS_SCENE * 2, segments: 32 },
+      "inner-vessel-collider",
+      { diameter: INNER_RADIUS_SCENE * 2, segments: 24 },
       this.scene,
     );
-    inner.position = new Vector3(...(this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0]));
-    inner.material = glass;
+    inner.position = new Vector3(
+      ...(this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0]),
+    );
+    inner.visibility = 0;
+    inner.isPickable = false;
+
+    const innerCup = MeshBuilder.CreateCylinder(
+      "inner-glass-cup",
+      {
+        diameterTop: 1.34,
+        diameterBottom: 0.98,
+        height: 1.08,
+        tessellation: 48,
+      },
+      this.scene,
+    );
+    innerCup.parent = inner;
+    innerCup.material = glass;
+    innerCup.isPickable = false;
+
+    const innerCupRim = MeshBuilder.CreateTorus(
+      "inner-glass-cup-rim",
+      {
+        diameter: 1.34,
+        thickness: 0.065,
+        tessellation: 48,
+      },
+      this.scene,
+    );
+    innerCupRim.parent = inner;
+    innerCupRim.position.y = 0.55;
+    innerCupRim.material = glass;
+    innerCupRim.isPickable = false;
+
     this.dynamicBody = new PhysicsAggregate(
       inner,
       PhysicsShapeType.SPHERE,
@@ -240,14 +286,18 @@ export class Game {
     );
     this.nestedVessel.configure(this.level.nestedVessel);
 
-    const innerFluid = MeshBuilder.CreateSphere(
+    const innerFluid = MeshBuilder.CreateCylinder(
       "inner-fluid",
-      { diameter: 0.82, segments: 24 },
+      {
+        diameterTop: 0.96,
+        diameterBottom: 0.7,
+        height: 0.62,
+        tessellation: 32,
+      },
       this.scene,
     );
     innerFluid.parent = inner;
-    innerFluid.position.y = -0.08;
-    innerFluid.scaling.y = 0.62;
+    innerFluid.position.y = -0.17;
     const innerWater = new PBRMaterial("inner-water-material", this.scene);
     innerWater.albedoColor = new Color3(0.03, 0.55, 0.34);
     innerWater.emissiveColor = new Color3(0.01, 0.08, 0.04);

@@ -21,6 +21,8 @@ export class NestedVesselRuntime {
   public readonly body: PhysicsAggregate;
 
   private readonly fluid = new FluidSystem();
+  private readonly visualShell: Mesh;
+  private readonly rim: Mesh;
   private readonly fluidMesh: Mesh;
   private definition: NestedVesselDefinition | null = null;
   private compartment: FluidCompartment | null = null;
@@ -36,9 +38,37 @@ export class NestedVesselRuntime {
       { diameter: PHYSICS_RADIUS_SCENE * 2, segments: 32 },
       scene,
     );
-    this.mesh.material = glassMaterial;
     this.mesh.visibility = 0;
     this.mesh.isPickable = false;
+
+    this.visualShell = MeshBuilder.CreateCylinder(
+      "nested-glass-cup",
+      {
+        diameterTop: 1.02,
+        diameterBottom: 0.76,
+        height: 0.92,
+        tessellation: 48,
+      },
+      scene,
+    );
+    this.visualShell.parent = this.mesh;
+    this.visualShell.position.y = 0.02;
+    this.visualShell.material = glassMaterial;
+    this.visualShell.isPickable = false;
+
+    this.rim = MeshBuilder.CreateTorus(
+      "nested-glass-cup-rim",
+      {
+        diameter: 1.02,
+        thickness: 0.055,
+        tessellation: 48,
+      },
+      scene,
+    );
+    this.rim.parent = this.mesh;
+    this.rim.position.y = 0.48;
+    this.rim.material = glassMaterial;
+    this.rim.isPickable = false;
 
     this.body = new PhysicsAggregate(
       this.mesh,
@@ -51,13 +81,18 @@ export class NestedVesselRuntime {
       scene,
     );
 
-    this.fluidMesh = MeshBuilder.CreateSphere(
+    this.fluidMesh = MeshBuilder.CreateCylinder(
       "nested-contained-water",
-      { diameter: 0.72, segments: 24 },
+      {
+        diameterTop: 0.79,
+        diameterBottom: 0.58,
+        height: 0.62,
+        tessellation: 32,
+      },
       scene,
     );
     this.fluidMesh.parent = this.mesh;
-    this.fluidMesh.position.y = -0.08;
+    this.fluidMesh.position.y = -0.11;
     this.fluidMesh.material = waterMaterial;
     this.fluidMesh.isPickable = false;
     this.fluidMesh.visibility = 0;
@@ -72,6 +107,8 @@ export class NestedVesselRuntime {
       this.compartment = null;
       this.lastPressurePa = 0;
       this.mesh.visibility = 0;
+      this.visualShell.visibility = 0;
+      this.rim.visibility = 0;
       this.fluidMesh.visibility = 0;
       this.mesh.position.copyFromFloats(0, -20, 0);
       return;
@@ -83,7 +120,9 @@ export class NestedVesselRuntime {
       );
     }
 
-    this.mesh.visibility = 1;
+    this.mesh.visibility = 0;
+    this.visualShell.visibility = 1;
+    this.rim.visibility = 1;
     this.mesh.position.copyFromFloats(...this.definition.initialPosition);
 
     this.compartment = {

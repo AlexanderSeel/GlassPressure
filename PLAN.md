@@ -172,7 +172,7 @@ The previous prototype drifted too far toward a two-tank routing game. That is n
 The canonical first-level loop is now:
 
 1. A **single tall outer glass chamber** contains a smaller open parent cup.
-2. Two physical glass bodies begin **inside that parent cup**, not in a separate receiver display.
+2. Two physical glass bodies begin **inside that parent cup**, not in a separate receiver display. Their visible meshes are now cup/bell-shaped glass forms rather than generic balls, while simple hidden collision proxies remain underneath for stability.
 3. Water enters the parent cup continuously from above.
 4. As the water level rises, the nested bodies become buoyant, contact each other and contact the cup walls.
 5. The player drills a marked transfer port in the parent glass to alter how quickly water escapes into the surrounding chamber.
@@ -205,7 +205,7 @@ Current interaction usability: the thin torus is no longer the only pickable geo
 3. [x] Use parent-cup water height for buoyancy while a body is inside the cup, then surrounding-chamber water after escape.
 4. [x] Make Level 1 require drilling the inner nested body and physically escaping the parent cup.
 5. Add a third nested glass object with a different visual shape so Level 1 demonstrates a true multi-layer nest, not only two bodies.
-6. Replace the spherical nested visuals with open glass cup/bulb forms while retaining stable collision proxies.
+6. [x] Replace the first spherical nested visuals with open glass cup/bell forms while retaining stable spherical collision proxies.
 7. Add visual water transfer from parent cup overflow/holes into the surrounding chamber at the actual transfer locations.
 8. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
 9. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
