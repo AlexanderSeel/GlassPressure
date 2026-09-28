@@ -60,6 +60,7 @@ export class Game {
   private receiverWaterMesh!: Mesh;
   private dynamicBody!: PhysicsAggregate;
   private targetHost!: Mesh;
+  private sourceRing!: Mesh;
   private drillRoot!: TransformNode;
   private flowVisuals!: FlowVisuals;
   private breakVisuals!: GlassBreakVisuals;
@@ -146,6 +147,20 @@ export class Game {
     upper.material = glass;
     upper.isPickable = false;
     this.targetHost = upper;
+
+    this.sourceRing = MeshBuilder.CreateTorus(
+      "source-rotating-ring",
+      {
+        diameter: 4.05,
+        thickness: 0.16,
+        tessellation: 64,
+      },
+      this.scene,
+    );
+    this.sourceRing.parent = upper;
+    this.sourceRing.material = glass;
+    this.sourceRing.isPickable = false;
+    this.configureSourceRing();
 
     this.upperWaterMesh = MeshBuilder.CreateCylinder(
       "upper-water",
@@ -567,6 +582,7 @@ export class Game {
       this.targetHostBasePosition.y + offset.y,
       this.targetHostBasePosition.z,
     );
+    this.targetHost.rotation.y = offset.rotationY;
   }
 
   private resetLevel(): void {
@@ -590,6 +606,8 @@ export class Game {
     this.lastNestedOutflowM3 = 0;
     this.pointerMotion = 0;
     this.targetHost.position.copyFrom(this.targetHostBasePosition);
+    this.targetHost.rotation.copyFromFloats(0, 0, 0);
+    this.configureSourceRing();
 
     for (const target of this.targets) {
       target.reset();
@@ -604,6 +622,25 @@ export class Game {
     this.dynamicBody.body.setAngularVelocity(Vector3.Zero());
 
     this.updateWaterVisuals();
+  }
+
+  private configureSourceRing(): void {
+    const ring = this.level.sourceRing;
+    if (!ring) {
+      this.sourceRing.visibility = 0;
+      return;
+    }
+
+    this.sourceRing.visibility = 0.72;
+    this.sourceRing.position.copyFromFloats(0, ring.localY, 0);
+    this.sourceRing.rotation.copyFromFloats(ring.tiltRadians, 0, 0);
+    const diameterScale = ring.diameterScene / 4.05;
+    const thicknessScale = ring.thicknessScene / 0.16;
+    this.sourceRing.scaling.copyFromFloats(
+      diameterScale,
+      thicknessScale,
+      diameterScale,
+    );
   }
 
   private updateTargetVisuals(): void {

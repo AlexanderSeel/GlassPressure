@@ -4,6 +4,7 @@ import { evaluateLevel, type LevelPhase, type LevelSnapshot } from "./LevelState
 export type HostOffset = {
   x: number;
   y: number;
+  rotationY: number;
 };
 
 export class LevelRuntime {
@@ -49,7 +50,7 @@ export class LevelRuntime {
   public advance(dtSeconds: number): HostOffset {
     this.elapsedSeconds += Math.max(0, Math.min(dtSeconds, 0.05));
     const motion = this.level.hostMotion;
-    if (!motion) return { x: 0, y: 0 };
+    if (!motion) return { x: 0, y: 0, rotationY: 0 };
 
     const angle =
       this.elapsedSeconds * Math.PI * 2 * motion.frequencyHz +
@@ -59,6 +60,9 @@ export class LevelRuntime {
     return {
       x: Math.sin(angle) * motion.lateralAmplitudeScene,
       y: Math.sin(verticalAngle) * motion.verticalAmplitudeScene,
+      rotationY:
+        Math.sin(angle * 0.73 + motion.phaseRadians) *
+        (motion.rotationAmplitudeRadians ?? 0),
     };
   }
 }

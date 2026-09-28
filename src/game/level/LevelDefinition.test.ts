@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FIRST_LEVEL,
+  FIFTH_LEVEL,
   FOURTH_LEVEL,
   LEVELS,
   SECOND_LEVEL,
@@ -43,5 +44,12 @@ describe("LevelDefinition", () => {
     const nestedTarget = FOURTH_LEVEL.targets.find(target => target.host === "nested");
     expect(nestedTarget?.effect).toBe("nested-drain");
     expect(nestedTarget?.minHostHeightScene).toBeGreaterThan(2);
+  });
+
+  it("makes level five a rotating collar challenge", () => {
+    expect(FIFTH_LEVEL.sourceRing).toBeDefined();
+    expect(FIFTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(1);
+    expect(FIFTH_LEVEL.goal.minInnerXScene).toBeLessThan(0);
+    expect(FIFTH_LEVEL.goal.maxInnerXScene).toBeGreaterThan(0);
   });
 });

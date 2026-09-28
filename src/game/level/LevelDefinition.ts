@@ -21,8 +21,16 @@ export type DrillTargetDefinition = {
 export type HostMotionDefinition = {
   lateralAmplitudeScene: number;
   verticalAmplitudeScene: number;
+  rotationAmplitudeRadians?: number;
   frequencyHz: number;
   phaseRadians: number;
+};
+
+export type SourceRingDefinition = {
+  diameterScene: number;
+  thicknessScene: number;
+  localY: number;
+  tiltRadians: number;
 };
 
 export type NestedVesselDefinition = {
@@ -47,6 +55,7 @@ export type LevelDefinition = {
   receiverCapacityM3: number;
   goal: LevelGoal;
   hostMotion?: HostMotionDefinition;
+  sourceRing?: SourceRingDefinition;
   nestedVessel?: NestedVesselDefinition;
   targets: readonly DrillTargetDefinition[];
 };
@@ -270,11 +279,95 @@ export const FOURTH_LEVEL: LevelDefinition = {
   ],
 };
 
+export const FIFTH_LEVEL: LevelDefinition = {
+  id: "rotating-collar",
+  name: "Rotating Collar",
+  objective:
+    "Time the rotating collar, drain the source and keep the floating vessel inside the central routing band.",
+  initialSourceVolumeM3: 0.0094,
+  sourceCapacityM3: 0.012,
+  sourceHeightMeters: 0.52,
+  sourceInletM3PerSecond: 0.000043,
+  initialReceiverVolumeM3: 0.0068,
+  receiverCapacityM3: 0.018,
+  goal: {
+    maxSourceFill01: 0.53,
+    minReceiverFill01: 0.63,
+    minInnerHeightScene: 2.04,
+    minInnerXScene: -0.34,
+    maxInnerXScene: 0.34,
+  },
+  hostMotion: {
+    lateralAmplitudeScene: 0.12,
+    verticalAmplitudeScene: 0.04,
+    rotationAmplitudeRadians: Math.PI,
+    frequencyHz: 0.16,
+    phaseRadians: 0.35,
+  },
+  sourceRing: {
+    diameterScene: 4.05,
+    thicknessScene: 0.16,
+    localY: -0.02,
+    tiltRadians: 0.34,
+  },
+  targets: [
+    {
+      id: "collar-left",
+      label: "Left collar drain",
+      effect: "primary-drain",
+      localPosition: [-1.82, -0.08, 0],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.29,
+      holeDiameterScale: 0.78,
+      holeElevationMeters: 0.1,
+      wallThicknessMeters: 0.0034,
+      stressMultiplier: 1.16,
+    },
+    {
+      id: "collar-right",
+      label: "Right collar drain",
+      effect: "primary-drain",
+      localPosition: [1.82, -0.08, 0],
+      localRotation: [Math.PI / 2, Math.PI / 2, 0],
+      markerDiameterScene: 0.29,
+      holeDiameterScale: 0.78,
+      holeElevationMeters: 0.1,
+      wallThicknessMeters: 0.0034,
+      stressMultiplier: 1.16,
+    },
+    {
+      id: "collar-neutral",
+      label: "Neutral collar drain",
+      effect: "primary-drain",
+      localPosition: [0, -0.12, -1.82],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.25,
+      holeDiameterScale: 0.62,
+      holeElevationMeters: 0.12,
+      wallThicknessMeters: 0.0031,
+      stressMultiplier: 1.23,
+    },
+    {
+      id: "collar-relief",
+      label: "Collar relief",
+      effect: "pressure-relief",
+      localPosition: [0.2, 0.27, 1.8],
+      localRotation: [Math.PI / 2, 0, 0],
+      markerDiameterScene: 0.24,
+      holeDiameterScale: 0.36,
+      holeElevationMeters: 0.35,
+      wallThicknessMeters: 0.003,
+      stressMultiplier: 1.26,
+    },
+  ],
+};
+
 export const LEVELS: readonly LevelDefinition[] = [
   FIRST_LEVEL,
   SECOND_LEVEL,
   THIRD_LEVEL,
   FOURTH_LEVEL,
+  FIFTH_LEVEL,
 ];
 
 export function validateLevelDefinition(level: LevelDefinition): string[] {
@@ -289,6 +382,9 @@ export function validateLevelDefinition(level: LevelDefinition): string[] {
     if (level.hostMotion.frequencyHz < 0) errors.push("host motion frequency cannot be negative");
     if (level.hostMotion.lateralAmplitudeScene < 0) errors.push("lateral amplitude cannot be negative");
     if (level.hostMotion.verticalAmplitudeScene < 0) errors.push("vertical amplitude cannot be negative");
+    if ((level.hostMotion.rotationAmplitudeRadians ?? 0) < 0) {
+      errors.push("rotation amplitude cannot be negative");
+    }
   }
 
   for (const target of level.targets) {
@@ -299,6 +395,11 @@ export function validateLevelDefinition(level: LevelDefinition): string[] {
     if (target.host === "nested" && !level.nestedVessel?.enabled) {
       errors.push(`nested target requires nested vessel: ${target.id}`);
     }
+  }
+
+  if (level.sourceRing) {
+    if (level.sourceRing.diameterScene <= 0) errors.push("ring diameter must be positive");
+    if (level.sourceRing.thicknessScene <= 0) errors.push("ring thickness must be positive");
   }
 
   if (level.nestedVessel) {

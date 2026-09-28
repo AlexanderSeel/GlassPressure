@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIRST_LEVEL, SECOND_LEVEL } from "./LevelDefinition";
+import { FIFTH_LEVEL, FIRST_LEVEL, SECOND_LEVEL } from "./LevelDefinition";
 import { LevelRuntime } from "./LevelRuntime";
 
 describe("LevelRuntime", () => {
@@ -22,5 +22,11 @@ describe("LevelRuntime", () => {
     const runtime = new LevelRuntime([SECOND_LEVEL]);
     const offset = runtime.advance(0.05);
     expect(Math.abs(offset.x) + Math.abs(offset.y)).toBeGreaterThan(0);
+  });
+
+  it("produces rotational host motion for the rotating collar", () => {
+    const runtime = new LevelRuntime([FIFTH_LEVEL]);
+    const offset = runtime.advance(0.2);
+    expect(Math.abs(offset.rotationY)).toBeGreaterThan(0.05);
   });
 });
