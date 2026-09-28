@@ -144,8 +144,8 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [x] fixed-step accumulator independent of render FPS
 - [x] submerged-volume buoyancy for the first dynamic sphere
 - [x] crack visualization and catastrophic failure
-- [ ] multi-step objective completion
-- [ ] reset/retry flow
+- [x] first multi-condition objective completion
+- [x] deterministic reset/retry flow
 - [ ] visual polish pass
 
 ### M2 — Robust drilling & glass
@@ -170,8 +170,8 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 
 ### M4 — Level framework
 - [ ] level schema
-- [ ] objective/failure system
-- [ ] restart/replay
+- [x] first objective/failure evaluation system
+- [x] restart/replay for vertical slice
 - [ ] level selection
 - [ ] save progress
 - [ ] six handcrafted levels

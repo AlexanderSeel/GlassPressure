@@ -72,6 +72,14 @@ export class DrillController {
     }
   }
 
+  public reset(): void {
+    this.state = "idle";
+    this.extension = 0;
+    this.contactTimeSeconds = 0;
+    this.triggerHeld = false;
+    this.breakthroughTimeSeconds = 0;
+  }
+
   public get isDrilling(): boolean {
     return this.state === "drilling";
   }

@@ -21,6 +21,7 @@ import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyan
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
+import { evaluateLevel, type LevelPhase } from "./level/LevelState";
 import { DrillController } from "./tools/DrillController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
@@ -322,6 +323,7 @@ export class Game {
       if (event.key === "1") this.diameterIndex = 0;
       if (event.key === "2") this.diameterIndex = 1;
       if (event.key === "3") this.diameterIndex = 2;
+      if (event.key.toLowerCase() === "r") this.resetLevel();
     });
   }
 
@@ -355,6 +357,16 @@ export class Game {
     this.applyBuoyancy();
     this.applyJetForce(result.outflowM3);
     this.updateWaterVisuals();
+
+    if (this.levelPhase === "playing") {
+      this.levelPhase = evaluateLevel({
+        glassFailed: this.failed,
+        holeCreated: this.holeCreated,
+        sourceFill01: this.fluid.getFillRatio(this.vessel),
+        receiverFill01: this.receiverFill,
+        innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,
+      });
+    }
   }
 
   private applyBuoyancy(): void {
@@ -417,6 +429,7 @@ export class Game {
     const toolState = document.querySelector<HTMLElement>("#tool-state");
     const alignment = document.querySelector<HTMLElement>("#alignment");
     const flow = document.querySelector<HTMLElement>("#flow");
+    const levelState = document.querySelector<HTMLElement>("#level-state");
 
     if (pressure) pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
     if (risk) risk.textContent = `${Math.round(this.crackRisk * 100)}%`;
@@ -424,6 +437,14 @@ export class Game {
     if (toolState) toolState.textContent = this.failed ? "glass failed" : this.drill.state;
     if (alignment) alignment.textContent = `${Math.round(this.drillAlignment01 * 100)}%`;
     if (flow) flow.textContent = `${(this.lastOutflowM3 * 60_000_000).toFixed(1)} mL/s`;
+    if (levelState) {
+      levelState.textContent =
+        this.levelPhase === "won"
+          ? "Complete — press R to replay"
+          : this.levelPhase === "failed"
+            ? "Glass failed — press R to retry"
+            : "Drain · fill · lift";
+    }
   }
 
   private get selectedDiameter(): number {
