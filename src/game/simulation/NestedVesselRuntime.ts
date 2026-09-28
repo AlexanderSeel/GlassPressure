@@ -169,6 +169,10 @@ export class NestedVesselRuntime {
     return this.mesh.getAbsolutePosition().y;
   }
 
+  public get position(): Vector3 {
+    return this.mesh.getAbsolutePosition();
+  }
+
   public get pressurePa(): number {
     return this.lastPressurePa;
   }
