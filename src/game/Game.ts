@@ -643,7 +643,7 @@ export class Game {
   }
 
   private advanceDevCheckpoint(): void {
-    if (this.runtime.levelIndex !== 0) return;
+    if (this.runtime.levelNumber !== 1) return;
 
     const position = this.nestedVessel.position;
     if (this.fluid.getFillRatio(this.vessel) < 0.9) {
