@@ -5,6 +5,7 @@ import {
   FOURTH_LEVEL,
   LEVELS,
   SECOND_LEVEL,
+  SIXTH_LEVEL,
   THIRD_LEVEL,
   validateLevelDefinition,
 } from "./LevelDefinition";
@@ -51,5 +52,14 @@ describe("LevelDefinition", () => {
     expect(FIFTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(1);
     expect(FIFTH_LEVEL.goal.minInnerXScene).toBeLessThan(0);
     expect(FIFTH_LEVEL.goal.maxInnerXScene).toBeGreaterThan(0);
+  });
+
+  it("makes level six combine rotation, pressure and nested release", () => {
+    expect(SIXTH_LEVEL.nestedVessel?.enabled).toBe(true);
+    expect(SIXTH_LEVEL.sourceRing).toBeDefined();
+    expect(SIXTH_LEVEL.goal.requireSecondaryHole).toBe(true);
+    expect(SIXTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(2);
+    expect(SIXTH_LEVEL.targets.some(target => target.effect === "pressure-relief")).toBe(true);
+    expect(SIXTH_LEVEL.targets.some(target => target.effect === "nested-drain")).toBe(true);
   });
 });
