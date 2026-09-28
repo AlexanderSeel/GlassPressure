@@ -5,6 +5,7 @@ import {
   Scene,
   Vector3,
 } from "@babylonjs/core";
+import { predictJetImpact } from "../simulation/JetTrajectory";
 
 export class JetStreamVisual {
   private readonly stream: Mesh;
@@ -73,12 +74,18 @@ export class JetStreamVisual {
     this.stream.lookAt(origin.add(normal.scale(length + 1)));
     this.stream.rotate(Vector3.Right(), Math.PI / 2);
 
-    const downward = normal.y < -0.08;
-    const toSurface = downward
-      ? (receiverSurfaceY - origin.y) / normal.y
-      : length;
-    const travel = Math.min(2.2, Math.max(0.25, toSurface));
-    const impact = origin.add(normal.scale(travel));
+    const jetSpeed = 0.75 + strength * 1.4;
+    const predictedImpact = predictJetImpact(
+      origin,
+      normal,
+      jetSpeed,
+      receiverSurfaceY,
+      0.55,
+      3,
+    );
+    const impact =
+      predictedImpact?.position ??
+      origin.add(normal.scale(Math.min(2.2, Math.max(0.25, length))));
     impact.y = receiverSurfaceY + 0.015;
 
     this.splash.position.copyFrom(impact);
