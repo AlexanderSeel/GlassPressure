@@ -20,6 +20,7 @@ export class DrillTargetRuntime {
   public progress01 = 0;
   public stress01 = 0;
   public holeCreated = false;
+  public fluidHoleIndex: number | null = null;
   private hovered = false;
 
   public constructor(
@@ -183,7 +184,20 @@ export class DrillTargetRuntime {
       progressScale,
     );
 
-    if (failed || this.holeCreated) return;
+    if (this.holeCreated) {
+      this.material.alpha = 0.72;
+      this.marker.visibility = 0.88;
+      this.marker.scaling.setAll(0.58);
+      this.hitArea.visibility = 0.92;
+      const opening = this.hitArea.material as StandardMaterial;
+      opening.alpha = 0.92;
+      opening.diffuseColor = new Color3(0.015, 0.025, 0.03);
+      opening.emissiveColor = new Color3(0.005, 0.01, 0.012);
+      this.progressFill.visibility = 0;
+      return;
+    }
+
+    if (failed) return;
 
     if (!this.isHeightAccessible) {
       this.material.alpha = 0.28;
@@ -251,6 +265,7 @@ export class DrillTargetRuntime {
     this.progress01 = 0;
     this.stress01 = 0;
     this.holeCreated = false;
+    this.fluidHoleIndex = null;
     this.hovered = false;
     this.marker.scaling.setAll(1);
     this.marker.visibility = 1;
