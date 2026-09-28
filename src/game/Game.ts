@@ -26,6 +26,7 @@ import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
+import { JetStreamVisual } from "./scene/JetStreamVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -59,12 +60,12 @@ export class Game {
   private vessel!: FluidCompartment;
   private upperWaterMesh!: Mesh;
   private receiverWaterMesh!: Mesh;
-  private jetMesh!: Mesh;
   private dynamicBody!: PhysicsAggregate;
   private targetHost!: Mesh;
   private drillRoot!: TransformNode;
   private flowVisuals!: FlowVisuals;
   private breakVisuals!: GlassBreakVisuals;
+  private jetVisual!: JetStreamVisual;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
@@ -241,13 +242,7 @@ export class Game {
       this.targets.push(new DrillTargetRuntime(this.scene, this.targetHost, targetDefinition));
     }
 
-    this.jetMesh = MeshBuilder.CreateCylinder(
-      "pressure-jet",
-      { diameter: 0.09, height: 1, tessellation: 16 },
-      this.scene,
-    );
-    this.jetMesh.material = water;
-    this.jetMesh.visibility = 0;
+    this.jetVisual = new JetStreamVisual(this.scene, water);
     this.flowVisuals = new FlowVisuals(
       this.scene,
       this.quality.flowParticlePoolSize,
@@ -256,7 +251,6 @@ export class Game {
       this.scene,
       this.quality.glassFragmentBudget,
     );
-    this.jetMesh.isPickable = false;
 
     const inlet = MeshBuilder.CreateCylinder(
       "inlet-stream",
@@ -441,7 +435,7 @@ export class Game {
     this.updateTargetVisuals();
     this.applyBuoyancy();
     this.applyJetForce(result.outflowM3);
-    this.updateJetVisual(result.outflowM3);
+    this.updateJetVisual(result.outflowM3, dt);
     this.updateFlowVisuals(result.outflowM3, dt);
     this.updateWaterVisuals();
 
@@ -555,24 +549,15 @@ export class Game {
     );
   }
 
-  private updateJetVisual(outflowM3: number): void {
+  private updateJetVisual(outflowM3: number, dt: number): void {
     const target = this.latestOpenedTarget;
-    if (!target || outflowM3 <= 0) {
-      this.jetMesh.visibility = 0;
-      return;
-    }
-
-    const flowMlPerSecond = outflowM3 * 60_000_000;
-    const strength = Math.min(1, flowMlPerSecond / 120);
-    const length = 0.25 + strength * 1.55;
-    const origin = target.marker.getAbsolutePosition();
-    const normal = this.targetSurfaceNormal(target);
-
-    this.jetMesh.visibility = 0.25 + strength * 0.75;
-    this.jetMesh.scaling.y = length;
-    this.jetMesh.position.copyFrom(origin.add(normal.scale(length * 0.5)));
-    this.jetMesh.lookAt(origin.add(normal.scale(length + 1)));
-    this.jetMesh.rotate(Vector3.Right(), Math.PI / 2);
+    this.jetVisual.update(
+      dt,
+      outflowM3,
+      target?.marker.getAbsolutePosition() ?? null,
+      target ? this.targetSurfaceNormal(target) : null,
+      this.receiverWaterSurfaceY,
+    );
   }
 
   private updateFlowVisuals(outflowM3: number, dt: number): void {
@@ -668,8 +653,7 @@ export class Game {
       target.reset();
     }
 
-    this.jetMesh.visibility = 0;
-    this.jetMesh.scaling.setAll(1);
+    this.jetVisual.reset();
     this.flowVisuals.reset();
     this.breakVisuals.clear();
 
