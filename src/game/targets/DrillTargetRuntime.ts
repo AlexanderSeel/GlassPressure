@@ -129,6 +129,12 @@ export class DrillTargetRuntime {
     this.cracks.visibility = 1;
   }
 
+  public dispose(): void {
+    this.cracks.dispose();
+    this.marker.dispose();
+    this.material.dispose();
+  }
+
   public reset(): void {
     this.progress01 = 0;
     this.stress01 = 0;

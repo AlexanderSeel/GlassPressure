@@ -16,7 +16,7 @@ import {
   TransformNode,
   Vector3,
 } from "@babylonjs/core";
-import { FIRST_LEVEL } from "./level/LevelDefinition";
+import { LEVELS, type LevelDefinition } from "./level/LevelDefinition";
 import { evaluateLevel, type LevelPhase } from "./level/LevelState";
 import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
 import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
@@ -39,7 +39,10 @@ const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
 export class Game {
   private readonly engine: Engine;
   private readonly scene: Scene;
-  private readonly level = FIRST_LEVEL;
+  private levelIndex = 0;
+  private level: LevelDefinition = LEVELS[0]!;
+  private levelElapsedSeconds = 0;
+  private readonly targetHostBasePosition = new Vector3(0, 3.65, 0);
   private readonly fluid = new FluidSystem();
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
@@ -164,7 +167,7 @@ export class Game {
       { diameter: 3.6, height: 1.25, tessellation: 64 },
       this.scene,
     );
-    upper.position.y = 3.65;
+    upper.position.copyFrom(this.targetHostBasePosition);
     upper.material = glass;
     upper.isPickable = false;
     this.targetHost = upper;
@@ -174,7 +177,8 @@ export class Game {
       { diameter: 3.35, height: 1, tessellation: 64 },
       this.scene,
     );
-    this.upperWaterMesh.position.y = 3.4;
+    this.upperWaterMesh.parent = upper;
+    this.upperWaterMesh.position.y = -0.25;
     this.upperWaterMesh.material = water;
     this.upperWaterMesh.isPickable = false;
 
@@ -380,10 +384,13 @@ export class Game {
       if (event.key === "2") this.diameterIndex = 1;
       if (event.key === "3") this.diameterIndex = 2;
       if (event.key.toLowerCase() === "r") this.resetLevel();
+      if (event.key.toLowerCase() === "n") this.nextLevel();
     });
   }
 
   private simulate(dt: number): void {
+    this.updateHostMotion(dt);
+
     const alignment = this.activeTarget ? this.targetAlignment01(this.activeTarget) : 0;
     const targetAvailable =
       this.activeTarget !== null &&
@@ -563,7 +570,7 @@ export class Game {
     const upperFill = this.fluid.getFillRatio(this.vessel);
     const upperHeight = 0.03 + upperFill * 1.02;
     this.upperWaterMesh.scaling.y = upperHeight;
-    this.upperWaterMesh.position.y = 3.06 + upperHeight * 0.5;
+    this.upperWaterMesh.position.y = -0.59 + upperHeight * 0.5;
 
     const lowerHeight = Math.max(
       0.025,
@@ -573,10 +580,52 @@ export class Game {
     this.receiverWaterMesh.position.y = RECEIVER_BASE_Y + lowerHeight * 0.5;
   }
 
+  private nextLevel(): void {
+    this.levelIndex = (this.levelIndex + 1) % LEVELS.length;
+    this.level = LEVELS[this.levelIndex] ?? LEVELS[0]!;
+    this.rebuildTargets();
+    this.resetLevel();
+  }
+
+  private rebuildTargets(): void {
+    for (const target of this.targets) target.dispose();
+    this.targets.length = 0;
+    for (const definition of this.level.targets) {
+      this.targets.push(
+        new DrillTargetRuntime(this.scene, this.targetHost, definition),
+      );
+    }
+  }
+
+  private updateHostMotion(dt: number): void {
+    this.levelElapsedSeconds += dt;
+    const motion = this.level.hostMotion;
+    if (!motion) {
+      this.targetHost.position.copyFrom(this.targetHostBasePosition);
+      return;
+    }
+
+    const angle =
+      this.levelElapsedSeconds * Math.PI * 2 * motion.frequencyHz +
+      motion.phaseRadians;
+    const verticalAngle = angle * 1.37 + motion.phaseRadians * 0.5;
+
+    this.targetHost.position.copyFromFloats(
+      this.targetHostBasePosition.x +
+        Math.sin(angle) * motion.lateralAmplitudeScene,
+      this.targetHostBasePosition.y +
+        Math.sin(verticalAngle) * motion.verticalAmplitudeScene,
+      this.targetHostBasePosition.z,
+    );
+  }
+
   private resetLevel(): void {
     this.fixedStep.reset();
     this.drill.reset();
+    this.vessel.capacityM3 = this.level.sourceCapacityM3;
     this.vessel.volumeM3 = this.level.initialSourceVolumeM3;
+    this.vessel.heightMeters = this.level.sourceHeightMeters;
+    this.vessel.inletM3PerSecond = this.level.sourceInletM3PerSecond;
     this.vessel.holes.length = 0;
     this.receiverVolumeM3 = this.level.initialReceiverVolumeM3;
     this.diameterIndex = 1;
@@ -588,6 +637,8 @@ export class Game {
     this.lastPressurePa = 0;
     this.lastOutflowM3 = 0;
     this.pointerMotion = 0;
+    this.levelElapsedSeconds = 0;
+    this.targetHost.position.copyFrom(this.targetHostBasePosition);
 
     for (const target of this.targets) {
       target.reset();
