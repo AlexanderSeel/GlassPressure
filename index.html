@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#091216" />
+  <title>Glass Pressure</title>
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas" aria-label="Glass Pressure 3D game view"></canvas>
+  <aside id="hud" aria-live="polite">
+    <section class="hud-card"><span class="eyebrow">OBJECTIVE</span><strong>Drain the upper vessel</strong><p>Raise the inner vessel without cracking the protected glass.</p></section>
+    <section class="hud-card metrics"><div><span>Water pressure</span><strong id="pressure">0 kPa</strong></div><div><span>Crack risk</span><strong id="risk">0%</strong></div><div><span>Hole diameter</span><strong id="diameter">10 mm</strong></div></section>
+    <section class="hud-card instructions"><strong>Controls</strong><p>Orbit: drag · Zoom: wheel · Drill: hold left mouse on cyan target · Diameter: 1 / 2 / 3</p></section>
+  </aside>
+  <div id="reticle" aria-hidden="true"></div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
