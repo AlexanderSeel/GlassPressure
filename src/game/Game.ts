@@ -2,11 +2,8 @@ import HavokPhysics from "@babylonjs/havok";
 import {
   ArcRotateCamera,
   Color3,
-  Color4,
-  DirectionalLight,
   Engine,
   HavokPlugin,
-  HemisphericLight,
   Mesh,
   MeshBuilder,
   PhysicsAggregate,
@@ -25,6 +22,8 @@ import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
+import { createEnvironmentScene } from "./scene/EnvironmentScene";
+import { createBasinCollision } from "./scene/BasinCollision";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { JetStreamVisual } from "./scene/JetStreamVisual";
@@ -114,53 +113,11 @@ export class Game {
   }
 
   private createEnvironment(): void {
-    this.scene.clearColor = new Color4(0.025, 0.055, 0.07, 1);
-    this.scene.environmentIntensity = 0.75;
-
-    this.camera = new ArcRotateCamera(
-      "orbit-camera",
-      Math.PI * 1.25,
-      Math.PI * 0.34,
-      11,
-      new Vector3(0, 1.7, 0),
+    this.camera = createEnvironmentScene(
       this.scene,
+      this.canvas,
+      this.quality,
     );
-    this.camera.lowerRadiusLimit = 6;
-    this.camera.upperRadiusLimit = 16;
-    this.camera.lowerBetaLimit = 0.25;
-    this.camera.upperBetaLimit = Math.PI * 0.49;
-    this.camera.wheelPrecision = 45;
-    this.camera.panningSensibility = 0;
-    this.camera.attachControl(this.canvas, true);
-
-    const hemi = new HemisphericLight("ambient", new Vector3(0, 1, 0), this.scene);
-    hemi.intensity = 0.8;
-    hemi.diffuse = new Color3(0.68, 0.82, 0.88);
-
-    const key = new DirectionalLight("key", new Vector3(-0.5, -1, 0.35), this.scene);
-    key.position = new Vector3(5, 10, -6);
-    key.intensity = 2.1;
-
-    const floor = MeshBuilder.CreateGround("floor", { width: 12, height: 12 }, this.scene);
-    const floorMaterial = new PBRMaterial("floor-material", this.scene);
-    floorMaterial.albedoColor = new Color3(0.06, 0.1, 0.105);
-    floorMaterial.roughness = 0.28;
-    floor.material = floorMaterial;
-    new PhysicsAggregate(floor, PhysicsShapeType.BOX, { mass: 0, friction: 0.75 }, this.scene);
-
-    const chamber = MeshBuilder.CreateBox(
-      "chamber",
-      { width: 7.2, height: 6.4, depth: 7.2 },
-      this.scene,
-    );
-    chamber.position.y = 3.2;
-    chamber.material = createGlassMaterial(
-      "chamber-glass",
-      this.scene,
-      this.quality.glassRefractionIntensity,
-    );
-    chamber.visibility = 0.22;
-    chamber.isPickable = false;
   }
 
   private createPuzzle(): void {
@@ -243,7 +200,7 @@ export class Game {
     innerWater.alpha = 0.72;
     innerFluid.material = innerWater;
 
-    this.createBasinCollision();
+    createBasinCollision(this.scene, RECEIVER_BASE_Y);
 
     for (const targetDefinition of this.level.targets) {
       this.targets.push(
@@ -285,47 +242,6 @@ export class Game {
     };
 
     this.updateWaterVisuals();
-  }
-
-  private createBasinCollision(): void {
-    const basinFloor = MeshBuilder.CreateBox(
-      "basin-floor-collider",
-      { width: 4.3, depth: 4.3, height: 0.18 },
-      this.scene,
-    );
-    basinFloor.position.y = RECEIVER_BASE_Y - 0.09;
-    basinFloor.visibility = 0;
-    basinFloor.isPickable = false;
-    new PhysicsAggregate(
-      basinFloor,
-      PhysicsShapeType.BOX,
-      { mass: 0, friction: 0.55, restitution: 0.04 },
-      this.scene,
-    );
-
-    const wallSpecs = [
-      { name: "basin-wall-left", position: new Vector3(-2.2, 1.42, 0), size: new Vector3(0.18, 1.55, 4.4) },
-      { name: "basin-wall-right", position: new Vector3(2.2, 1.42, 0), size: new Vector3(0.18, 1.55, 4.4) },
-      { name: "basin-wall-back", position: new Vector3(0, 1.42, 2.2), size: new Vector3(4.4, 1.55, 0.18) },
-      { name: "basin-wall-front", position: new Vector3(0, 1.42, -2.2), size: new Vector3(4.4, 1.55, 0.18) },
-    ];
-
-    for (const spec of wallSpecs) {
-      const wall = MeshBuilder.CreateBox(
-        spec.name,
-        { width: spec.size.x, height: spec.size.y, depth: spec.size.z },
-        this.scene,
-      );
-      wall.position.copyFrom(spec.position);
-      wall.visibility = 0;
-      wall.isPickable = false;
-      new PhysicsAggregate(
-        wall,
-        PhysicsShapeType.BOX,
-        { mass: 0, friction: 0.4, restitution: 0.06 },
-        this.scene,
-      );
-    }
   }
 
   private createDrill(): void {
