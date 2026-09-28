@@ -100,7 +100,7 @@ export const FIRST_LEVEL: LevelDefinition = {
       host: "source",
       localPosition: [0, -0.18, -1.86],
       localRotation: [Math.PI / 2, 0, 0],
-      markerDiameterScene: 0.38,
+      markerDiameterScene: 0.48,
       holeDiameterScale: 0.72,
       holeElevationMeters: 0.11,
       wallThicknessMeters: 0.0038,
