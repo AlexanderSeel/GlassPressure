@@ -382,10 +382,12 @@ export class Game {
     const nestedOutflowM3 = this.nestedVessel.stepFluid(dt);
     this.lastPressurePa = result.pressurePa;
     this.lastNestedOutflowM3 = nestedOutflowM3;
-    this.lastOutflowM3 = result.outflowM3 + nestedOutflowM3;
+    const transferredM3 =
+      result.outflowM3 + result.overflowM3 + nestedOutflowM3;
+    this.lastOutflowM3 = transferredM3;
     this.receiverVolumeM3 = Math.min(
       this.level.receiverCapacityM3,
-      this.receiverVolumeM3 + result.outflowM3 + nestedOutflowM3,
+      this.receiverVolumeM3 + transferredM3,
     );
 
     this.pointerMotion *= Math.exp(-dt * 7.5);
