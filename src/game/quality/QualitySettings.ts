@@ -5,6 +5,7 @@ export type QualityPreset = {
   hardwareScalingLevel: number;
   glassRefractionIntensity: number;
   flowParticlePoolSize: number;
+  glassFragmentBudget: number;
 };
 
 export const QUALITY_PRESETS: Record<QualityTier, QualityPreset> = {
@@ -13,18 +14,21 @@ export const QUALITY_PRESETS: Record<QualityTier, QualityPreset> = {
     hardwareScalingLevel: 1.5,
     glassRefractionIntensity: 0.35,
     flowParticlePoolSize: 10,
+    glassFragmentBudget: 4,
   },
   medium: {
     tier: "medium",
     hardwareScalingLevel: 1.2,
     glassRefractionIntensity: 0.62,
     flowParticlePoolSize: 18,
+    glassFragmentBudget: 7,
   },
   high: {
     tier: "high",
     hardwareScalingLevel: 1,
     glassRefractionIntensity: 0.85,
     flowParticlePoolSize: 28,
+    glassFragmentBudget: 10,
   },
 };
 

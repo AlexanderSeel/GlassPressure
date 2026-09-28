@@ -140,6 +140,7 @@ export class DrillTargetRuntime {
     this.stress01 = 0;
     this.holeCreated = false;
     this.marker.scaling.setAll(1);
+    this.marker.visibility = 1;
     this.cracks.visibility = 0;
     this.resetMaterial();
   }

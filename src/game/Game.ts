@@ -25,6 +25,7 @@ import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial } from "./scene/materials";
 import { FlowVisuals } from "./scene/FlowVisuals";
+import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -63,6 +64,7 @@ export class Game {
   private targetHost!: Mesh;
   private drillRoot!: TransformNode;
   private flowVisuals!: FlowVisuals;
+  private breakVisuals!: GlassBreakVisuals;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
@@ -249,6 +251,10 @@ export class Game {
     this.flowVisuals = new FlowVisuals(
       this.scene,
       this.quality.flowParticlePoolSize,
+    );
+    this.breakVisuals = new GlassBreakVisuals(
+      this.scene,
+      this.quality.glassFragmentBudget,
     );
     this.jetMesh.isPickable = false;
 
@@ -665,6 +671,7 @@ export class Game {
     this.jetMesh.visibility = 0;
     this.jetMesh.scaling.setAll(1);
     this.flowVisuals.reset();
+    this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(0.45, 1.75, 0);
     this.dynamicBody.body.setLinearVelocity(Vector3.Zero());
@@ -686,6 +693,11 @@ export class Game {
     this.activeTarget = target;
     this.drill.release();
     target.showFailure();
+    target.marker.visibility = 0.18;
+    this.breakVisuals.spawn(
+      target.marker.getAbsolutePosition(),
+      target.surfaceNormal(this.camera.position),
+    );
   }
 
   private updateToolVisual(): void {
