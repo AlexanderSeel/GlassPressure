@@ -191,6 +191,13 @@ export class NestedVesselRuntime {
     this.body.body.applyForce(force, this.mesh.getAbsolutePosition());
   }
 
+  public setPosition(position: Vector3): void {
+    if (!this.definition) return;
+    this.mesh.position.copyFrom(position);
+    this.body.body.setLinearVelocity(Vector3.Zero());
+    this.body.body.setAngularVelocity(Vector3.Zero());
+  }
+
   public applyJetReaction(direction: Vector3, outflowM3: number): void {
     if (!this.definition || outflowM3 <= 0) return;
     const position = this.mesh.getAbsolutePosition();
