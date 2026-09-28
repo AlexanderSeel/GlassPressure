@@ -12,6 +12,7 @@ export type HudSnapshot = {
   alignment01: number;
   flowM3: number;
   selectedTargetLabel: string;
+  drillProgress01: number;
   sourceFill01: number;
   receiverFill01: number;
   sourceVolumeM3: number;
@@ -42,6 +43,8 @@ export class HudController {
     innerX: this.byId("inner-x"),
     bodyVelocity: this.byId("body-velocity"),
     selectedTarget: this.byId("selected-target"),
+    drillProgress: this.byId("drill-progress"),
+    drillProgressText: this.byId("drill-progress-text"),
     nestedHeight: this.byId("nested-height"),
     nestedFill: this.byId("nested-fill"),
     quality: this.byId("quality-tier"),
@@ -62,6 +65,9 @@ export class HudController {
     this.elements.flow.textContent =
       `${(snapshot.flowM3 * 60_000_000).toFixed(1)} mL/s`;
     this.elements.selectedTarget.textContent = snapshot.selectedTargetLabel;
+    const progressPercent = Math.round(snapshot.drillProgress01 * 100);
+    this.elements.drillProgress.style.width = `${progressPercent}%`;
+    this.elements.drillProgressText.textContent = `${progressPercent}%`;
 
     this.elements.levelState.textContent =
       snapshot.levelPhase === "won"

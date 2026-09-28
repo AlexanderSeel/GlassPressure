@@ -322,7 +322,9 @@ export class Game {
       if (event.button !== 0 || this.failed || this.runtime.phase !== "playing") return;
 
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-      const target = this.targets.find(runtime => runtime.marker === pick?.pickedMesh);
+      const target = this.targets.find(runtime =>
+        runtime.ownsPickedMesh(pick?.pickedMesh as Mesh | null | undefined),
+      );
       if (!target || target.holeCreated || !target.isHeightAccessible) return;
 
       this.activeTarget = target;
@@ -335,6 +337,15 @@ export class Game {
         600,
         this.pointerMotion + Math.hypot(event.movementX, event.movementY) * 7,
       );
+
+      const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
+      const hovered = this.targets.find(runtime =>
+        runtime.ownsPickedMesh(pick?.pickedMesh as Mesh | null | undefined),
+      );
+      for (const target of this.targets) {
+        target.setHovered(target === hovered);
+      }
+      this.canvas.style.cursor = hovered ? "crosshair" : "grab";
     });
 
     window.addEventListener("pointerup", () => {
@@ -403,6 +414,7 @@ export class Game {
     this.runtime.evaluate({
       glassFailed: this.failed,
       holeCreated: this.hasPrimaryDrain,
+      drillProgress01: this.activeTarget?.progress01 ?? 0,
       sourceFill01: this.fluid.getFillRatio(this.vessel),
       receiverFill01: this.receiverFill,
       innerHeightScene: this.dynamicBody.transformNode.getAbsolutePosition().y,

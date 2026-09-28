@@ -17,3 +17,9 @@ body{background:radial-gradient(circle at 20% 10%,rgba(44,103,87,.24),transparen
 .settings-panel label{display:block;margin:2px 0 7px;color:#b9cbd0;font-size:12px}
 .settings-panel select{width:100%;padding:8px 9px;border:1px solid rgba(188,235,245,.22);background:#0a171c;color:#eef8fb}
 .settings-panel p{margin:9px 0 0;color:#8ea8af;font-size:11px;line-height:1.4}
+
+.progress-card{display:grid;gap:7px}
+.progress-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase;color:#8ea8af}
+.progress-head strong{font-size:12px;color:#dff7fb}
+.progress-track{height:7px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(188,235,245,.14)}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,rgba(75,210,243,.8),rgba(176,246,255,.95));box-shadow:0 0 14px rgba(80,214,246,.35);transition:width 70ms linear}

@@ -25,6 +25,10 @@
       <div><span>Alignment</span><strong id="alignment">0%</strong></div>
       <div><span>Tool</span><strong id="tool-state">idle</strong></div>
     </section>
+    <section class="hud-card progress-card">
+      <div class="progress-head"><span>Drilling progress</span><strong id="drill-progress-text">0%</strong></div>
+      <div class="progress-track"><div id="drill-progress" class="progress-fill"></div></div>
+    </section>
     <section class="hud-card metrics">
       <div><span>Flow</span><strong id="flow">0 mL/s</strong></div>
       <div><span>Source fill</span><strong id="source-fill">0%</strong></div>
@@ -47,7 +51,7 @@
     </section>
     <section class="hud-card instructions">
       <strong>Controls</strong>
-      <p>Orbit: drag · Zoom: wheel · Drill: hold left mouse on cyan/orange target · Diameter: 1 / 2 / 3 · Retry: R · Next level: N</p>
+      <p>Orbit: drag · Zoom: wheel · Drill: hold anywhere inside the colored target patch · Diameter: 1 / 2 / 3 · Retry: R · Next level: N</p>
     </section>
   </aside>
   <button id="settings-toggle" class="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">⚙</button>

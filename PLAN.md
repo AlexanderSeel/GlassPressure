@@ -89,7 +89,7 @@ Planned tools:
 - [x] nested glass prototype
 - [x] deterministic fluid compartment
 - [x] selectable hole diameter
-- [x] hold-to-drill
+- [x] hold-to-drill on full colored target patch (not only ring edge)
 - [x] fixed-step simulation
 - [x] visible drill state machine
 - [x] pressure/head-based outflow
@@ -104,6 +104,7 @@ Planned tools:
 ### M2 — Robust drilling & glass
 - [x] targets attached to vessel transforms
 - [x] steadiness/alignment metrics
+- [x] clear drilling progress in-world + HUD
 - [x] local target stress model
 - [x] crack rendering
 - [x] geometry-derived surface normal via ray intersection with target vessel
@@ -176,6 +177,8 @@ The first two levels are now data-driven. Level 1 has two drillable regions:
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
 Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. Level 3 (`Jet Routing`) adds two competing primary drains on opposite sides and requires the inner vessel to finish in a positive-X routing zone; the faster drain can therefore be the strategically wrong choice. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. Level 6 (`Gyro Nest`) is the first composite challenge: the source translates and rotates, the collar is tilted, pressure relief can make the high-pressure small targets safer, receiver fill must expose a nested vessel, that vessel must then be drained, and the main floating body must finish inside a narrow central X band. Level 5 (`Rotating Collar`) adds rotational host motion, a visibly tilted glass collar ring and four moving drill regions. Its objective constrains the floating body's final X position, so side drains can over-route while the smaller neutral drain or counter-routing strategies preserve the center band. Break fragments now have bounded lifetimes and share the quality-tier fragment budget across multiple break events; oldest or expired Havok fragments are disposed so repeated failures cannot grow rigid-body count without bound. Jet splash placement now uses a tested ballistic receiver-impact calculation with the same speed/gravity scale as the pooled flow droplets, so horizontal and oblique jets no longer splash at a generic straight-line point. Level 4 (`Nested Release`) introduces a second Havok-driven glass vessel with its own contained-water compartment. The lower receiver must fill enough to buoy this vessel into an accessible height range before its purple nested-release target can be drilled. Draining that target transfers the trapped water to the receiver, reduces the extra water-weight force on the nested body and applies a reaction force from its own outflow jet. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity, pooled flow-particle budget and bounded glass-fragment count without changing gameplay physics. A compact settings shell lets the player persist Auto/Low/Medium/High; changes reload the scene so every dependent rendering budget switches coherently. Catastrophic target failure now spawns a small authored set of Havok-driven local fragments rather than attempting arbitrary runtime mesh fracture. The old rigid jet cylinder has been replaced by a tapered, flow-pulsed stream renderer with a receiver splash ring. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals live in `DrillTargetRuntime`. HUD DOM binding/rendering is isolated in `HudController`. Level indexing, cycling, timing, host motion offsets and phase evaluation now live in the tested `LevelRuntime`. Static environment/camera/light/chamber construction is isolated in `EnvironmentScene`, and receiver collision proxy construction is isolated in `BasinCollision`, leaving `Game.ts` primarily as the coordinator between level state, physics, interaction and rendering.
+
+Current interaction usability: the thin torus is no longer the only pickable geometry. Each target now has a full circular hit patch, hover feedback/cursor change, an in-world radial progress fill and a HUD progress bar/percentage so the player can see drilling progress immediately.
 
 ## Next implementation batch
 1. [x] Add a proper receiver-impact calculation so splash position follows curved/deflected jets.
