@@ -44,6 +44,7 @@ export class Game {
   private vessel!: FluidCompartment;
   private upperWaterMesh!: Mesh;
   private receiverWaterMesh!: Mesh;
+  private jetMesh!: Mesh;
   private dynamicBody!: PhysicsAggregate;
   private drillTarget!: Mesh;
   private targetHost!: Mesh;
@@ -224,6 +225,29 @@ export class Game {
       this.scene,
     );
 
+    const wallSpecs = [
+      { name: "basin-wall-left", position: new Vector3(-2.2, 1.42, 0), size: new Vector3(0.18, 1.55, 4.4) },
+      { name: "basin-wall-right", position: new Vector3(2.2, 1.42, 0), size: new Vector3(0.18, 1.55, 4.4) },
+      { name: "basin-wall-back", position: new Vector3(0, 1.42, 2.2), size: new Vector3(4.4, 1.55, 0.18) },
+      { name: "basin-wall-front", position: new Vector3(0, 1.42, -2.2), size: new Vector3(4.4, 1.55, 0.18) },
+    ];
+    for (const spec of wallSpecs) {
+      const wall = MeshBuilder.CreateBox(
+        spec.name,
+        { width: spec.size.x, height: spec.size.y, depth: spec.size.z },
+        this.scene,
+      );
+      wall.position.copyFrom(spec.position);
+      wall.visibility = 0;
+      wall.isPickable = false;
+      new PhysicsAggregate(
+        wall,
+        PhysicsShapeType.BOX,
+        { mass: 0, friction: 0.4, restitution: 0.06 },
+        this.scene,
+      );
+    }
+
     this.drillTarget = MeshBuilder.CreateTorus(
       "drill-target",
       { diameter: 0.56, thickness: 0.055, tessellation: 48 },
@@ -260,6 +284,18 @@ export class Game {
     cracks.visibility = 0;
     cracks.isPickable = false;
     this.crackMesh = cracks;
+
+    this.jetMesh = MeshBuilder.CreateCylinder(
+      "pressure-jet",
+      { diameter: 0.09, height: 1, tessellation: 16 },
+      this.scene,
+    );
+    this.jetMesh.parent = upper;
+    this.jetMesh.rotation.x = Math.PI / 2;
+    this.jetMesh.position = new Vector3(0, 0.03, -2.12);
+    this.jetMesh.material = water;
+    this.jetMesh.visibility = 0;
+    this.jetMesh.isPickable = false;
 
     const inlet = MeshBuilder.CreateCylinder(
       "inlet-stream",
@@ -417,6 +453,7 @@ export class Game {
     this.updateCrackVisual();
     this.applyBuoyancy();
     this.applyJetForce(result.outflowM3);
+    this.updateJetVisual(result.outflowM3);
     this.updateWaterVisuals();
 
     if (this.levelPhase === "playing") {
@@ -459,9 +496,23 @@ export class Game {
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
     const jet = Math.min(1.35, outflowM3 * 420000);
     this.dynamicBody.body.applyForce(
-      new Vector3(jet, jet * 0.12, 0),
+      new Vector3(0, jet * 0.08, -jet),
       bodyPosition,
     );
+  }
+
+  private updateJetVisual(outflowM3: number): void {
+    if (!this.holeCreated || outflowM3 <= 0) {
+      this.jetMesh.visibility = 0;
+      return;
+    }
+
+    const flowMlPerSecond = outflowM3 * 60_000_000;
+    const strength = Math.min(1, flowMlPerSecond / 120);
+    const length = 0.25 + strength * 1.55;
+    this.jetMesh.visibility = 0.25 + strength * 0.75;
+    this.jetMesh.scaling.y = length;
+    this.jetMesh.position.z = -1.86 - length * 0.5;
   }
 
   private updateWaterVisuals(): void {
@@ -497,6 +548,8 @@ export class Game {
 
     this.drillTarget.scaling.setAll(1);
     this.crackMesh.visibility = 0;
+    this.jetMesh.visibility = 0;
+    this.jetMesh.scaling.y = 1;
     this.targetMaterial.diffuseColor = new Color3(0.08, 0.8, 1);
     this.targetMaterial.emissiveColor = new Color3(0.04, 0.6, 0.95);
 
@@ -555,6 +608,10 @@ export class Game {
     const alignment = document.querySelector<HTMLElement>("#alignment");
     const flow = document.querySelector<HTMLElement>("#flow");
     const levelState = document.querySelector<HTMLElement>("#level-state");
+    const sourceFill = document.querySelector<HTMLElement>("#source-fill");
+    const receiverFill = document.querySelector<HTMLElement>("#receiver-fill");
+    const innerHeight = document.querySelector<HTMLElement>("#inner-height");
+    const velocity = document.querySelector<HTMLElement>("#body-velocity");
 
     if (pressure) {
       pressure.textContent = `${(this.lastPressurePa / 1000).toFixed(1)} kPa`;
@@ -581,6 +638,21 @@ export class Game {
           : this.levelPhase === "failed"
             ? "Glass failed — press R to retry"
             : "Drain · fill · lift";
+    }
+
+    const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
+    const bodyVelocity = this.dynamicBody.body.getLinearVelocity();
+    if (sourceFill) {
+      sourceFill.textContent = `${Math.round(this.fluid.getFillRatio(this.vessel) * 100)}%`;
+    }
+    if (receiverFill) {
+      receiverFill.textContent = `${Math.round(this.receiverFill * 100)}%`;
+    }
+    if (innerHeight) {
+      innerHeight.textContent = `${bodyPosition.y.toFixed(2)} m`;
+    }
+    if (velocity) {
+      velocity.textContent = `${bodyVelocity.length().toFixed(2)} m/s`;
     }
   }
 

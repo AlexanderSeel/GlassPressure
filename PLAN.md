@@ -163,10 +163,10 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [ ] stream-to-receiver intersection
 - [ ] overflow routing
 - [ ] multiple simultaneous holes
-- [ ] improved jet force
+- [x] first directional jet force + visual
 - [ ] contained-water mass coupling
 - [ ] center-of-mass approximation
-- [ ] debug fluid inspector
+- [x] first live fluid/body telemetry HUD
 
 ### M4 — Level framework
 - [ ] level schema
