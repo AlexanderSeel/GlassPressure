@@ -50,6 +50,18 @@
       <p>Orbit: drag · Zoom: wheel · Drill: hold left mouse on cyan/orange target · Diameter: 1 / 2 / 3 · Retry: R · Next level: N</p>
     </section>
   </aside>
+  <button id="settings-toggle" class="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">⚙</button>
+  <section id="settings-panel" class="settings-panel" data-open="false" hidden>
+    <span class="eyebrow">SETTINGS</span>
+    <label for="quality-select">Render quality</label>
+    <select id="quality-select">
+      <option value="auto">Auto</option>
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+    <p>Changing quality reloads the scene so resolution, glass, particles and fragment budgets stay consistent.</p>
+  </section>
   <div id="reticle" aria-hidden="true"></div>
 </div>
 <script type="module" src="/src/main.ts"></script>

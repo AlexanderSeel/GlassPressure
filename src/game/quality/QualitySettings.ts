@@ -1,4 +1,5 @@
 export type QualityTier = "low" | "medium" | "high";
+export type QualityPreference = "auto" | QualityTier;
 
 export type QualityPreset = {
   tier: QualityTier;
@@ -44,4 +45,27 @@ export function selectInitialQuality(
   if (cores <= 4 || (touch > 0 && dpr >= 2.5)) return QUALITY_PRESETS.low;
   if (cores <= 8 || touch > 0) return QUALITY_PRESETS.medium;
   return QUALITY_PRESETS.high;
+}
+
+export function parseQualityPreference(
+  value: string | null | undefined,
+): QualityPreference {
+  return value === "low" || value === "medium" || value === "high"
+    ? value
+    : "auto";
+}
+
+export function resolveQualityPreset(
+  preference: QualityPreference,
+  hardwareConcurrency: number | undefined,
+  maxTouchPoints: number | undefined,
+  devicePixelRatio: number | undefined,
+): QualityPreset {
+  return preference === "auto"
+    ? selectInitialQuality(
+        hardwareConcurrency,
+        maxTouchPoints,
+        devicePixelRatio,
+      )
+    : QUALITY_PRESETS[preference];
 }

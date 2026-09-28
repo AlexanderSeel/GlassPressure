@@ -30,7 +30,8 @@ import { JetStreamVisual } from "./scene/JetStreamVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
-import { selectInitialQuality } from "./quality/QualitySettings";
+import { resolveQualityPreset } from "./quality/QualitySettings";
+import { readQualityPreference, SettingsController } from "./ui/SettingsController";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
 const RECEIVER_BASE_Y = 0.65;
@@ -48,7 +49,9 @@ export class Game {
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
   private readonly hud = new HudController();
-  private readonly quality = selectInitialQuality(
+  private readonly qualityPreference = readQualityPreference();
+  private readonly quality = resolveQualityPreset(
+    this.qualityPreference,
     navigator.hardwareConcurrency,
     navigator.maxTouchPoints,
     window.devicePixelRatio,
@@ -96,6 +99,7 @@ export class Game {
     this.createPuzzle();
     this.createDrill();
     this.bindInput();
+    new SettingsController(this.qualityPreference);
 
     this.engine.runRenderLoop(() => {
       const frameSeconds = this.engine.getDeltaTime() / 1000;
