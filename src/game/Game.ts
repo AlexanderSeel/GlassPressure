@@ -141,7 +141,9 @@ export class Game{
     this.waterMesh.position.y=3.06+height*.5;
   }
 
-  private get selectedDiameter():number{return DIAMETERS[this.diameterIndex]??DIAMETERS[1];}\n\n  private updateHud(pressurePa?:number):void{
+  private get selectedDiameter():number{return DIAMETERS[this.diameterIndex]??0.01;}
+
+  private updateHud(pressurePa?:number):void{
     const pressure=document.querySelector<HTMLElement>("#pressure");
     const risk=document.querySelector<HTMLElement>("#risk");
     const diameter=document.querySelector<HTMLElement>("#diameter");
