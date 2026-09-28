@@ -459,6 +459,9 @@ export class Game {
       if (event.key === "3") this.diameterIndex = 2;
       if (event.key.toLowerCase() === "r") this.resetLevel();
       if (event.key.toLowerCase() === "n") this.nextLevel();
+      if (import.meta.env.DEV && event.key.toLowerCase() === "t") {
+        this.advanceDevCheckpoint();
+      }
     });
   }
 
@@ -502,6 +505,7 @@ export class Game {
     this.nestedVessel.applyHydrodynamics(
       this.waterSurfaceForBody(this.nestedVessel.position),
     );
+    this.applyNestedWashout();
     this.applyReceiverCurrent(dt, transferredM3);
     this.updateOpenHoleFlows(result.holeOutflowsM3, dt);
     this.updateOverflowVisuals(result.overflowM3, dt);
@@ -610,6 +614,53 @@ export class Game {
 
     const upward = new Vector3(0, Math.min(8, buoyancy), 0);
     this.dynamicBody.body.applyForce(upward.add(drag), bodyPosition);
+  }
+
+  private applyNestedWashout(): void {
+    if (
+      !this.level.nestedAssembly ||
+      !this.hasNestedDrain ||
+      this.nestedVesselEscaped
+    ) {
+      return;
+    }
+
+    const host = this.targetHost.getAbsolutePosition();
+    const position = this.nestedVessel.position;
+    const outward = position.subtract(host);
+    outward.y = 0;
+    if (outward.lengthSquared() < 0.04) {
+      outward.copyFromFloats(1, 0, 0);
+    } else {
+      outward.normalize();
+    }
+
+    const fill = this.fluid.getFillRatio(this.vessel);
+    const strength = 0.12 + fill * 0.24;
+    this.nestedVessel.applyCurrentForce(
+      outward.scale(strength).add(new Vector3(0, 0.08 + fill * 0.08, 0)),
+    );
+  }
+
+  private advanceDevCheckpoint(): void {
+    if (this.runtime.levelIndex !== 0) return;
+
+    const position = this.nestedVessel.position;
+    if (this.fluid.getFillRatio(this.vessel) < 0.9) {
+      this.vessel.volumeM3 = this.vessel.capacityM3 * 0.92;
+      this.receiverVolumeM3 = Math.max(
+        this.receiverVolumeM3,
+        this.level.receiverCapacityM3 * 0.04,
+      );
+      return;
+    }
+
+    if (position.y < 3.1) {
+      this.nestedVessel.setPosition(new Vector3(-0.45, 3.12, -0.05));
+      return;
+    }
+
+    this.nestedVessel.setPosition(new Vector3(1.25, 3.58, 0));
   }
 
   private applyReceiverCurrent(dt: number, transferredM3: number): void {
