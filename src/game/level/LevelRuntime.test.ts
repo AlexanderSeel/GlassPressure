@@ -15,7 +15,7 @@ describe("LevelRuntime", () => {
 
   it("returns zero host offset for a static level", () => {
     const runtime = new LevelRuntime([FIRST_LEVEL]);
-    expect(runtime.advance(1 / 60)).toEqual({ x: 0, y: 0 });
+    expect(runtime.advance(1 / 60)).toEqual({ x: 0, y: 0, rotationY: 0 });
   });
 
   it("produces host motion for the moving level", () => {
