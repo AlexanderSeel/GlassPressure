@@ -70,6 +70,7 @@ export class Game {
   private sourceRing!: Mesh;
   private drillRoot!: TransformNode;
   private flowVisuals!: FlowVisuals;
+  private overflowVisuals!: FlowVisuals;
   private breakVisuals!: GlassBreakVisuals;
   private jetVisual!: JetStreamVisual;
   private nestedVessel!: NestedVesselRuntime;
@@ -332,6 +333,10 @@ export class Game {
       this.scene,
       this.quality.flowParticlePoolSize,
     );
+    this.overflowVisuals = new FlowVisuals(
+      this.scene,
+      Math.max(8, Math.floor(this.quality.flowParticlePoolSize * 0.7)),
+    );
     this.breakVisuals = new GlassBreakVisuals(
       this.scene,
       this.quality.glassFragmentBudget,
@@ -509,6 +514,7 @@ export class Game {
     this.applyJetForce(jetOutflowM3);
     this.updateJetVisual(jetOutflowM3, dt);
     this.updateFlowVisuals(jetOutflowM3, dt);
+    this.updateOverflowVisuals(result.overflowM3, dt);
     this.breakVisuals.update(dt);
     this.updateWaterVisuals(dt, transferredM3);
 
@@ -680,6 +686,40 @@ export class Game {
     );
   }
 
+  private updateOverflowVisuals(
+    overflowM3: number,
+    dt: number,
+  ): void {
+    if (overflowM3 <= 0) {
+      this.overflowVisuals.update(dt, 0, null, null);
+      return;
+    }
+
+    const host = this.targetHost.getAbsolutePosition();
+    const phase = Math.floor(this.runtime.elapsedSeconds * 9) % 4;
+    const angles = [0.25, Math.PI * 0.5 + 0.35, Math.PI + 0.15, Math.PI * 1.5 - 0.25];
+    const angle = angles[phase] ?? 0;
+    const rimRadius = 1.82;
+
+    const origin = new Vector3(
+      host.x + Math.sin(angle) * rimRadius,
+      host.y + 0.84,
+      host.z + Math.cos(angle) * rimRadius,
+    );
+    const direction = new Vector3(
+      Math.sin(angle) * 0.42,
+      -1,
+      Math.cos(angle) * 0.42,
+    ).normalize();
+
+    this.overflowVisuals.update(
+      dt,
+      Math.max(overflowM3, 0.0000004),
+      origin,
+      direction,
+    );
+  }
+
   private updateWaterVisuals(
     dt = 1 / 60,
     transferredM3 = 0,
@@ -832,6 +872,7 @@ export class Game {
 
     this.jetVisual.reset();
     this.flowVisuals.reset();
+    this.overflowVisuals.reset();
     this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(

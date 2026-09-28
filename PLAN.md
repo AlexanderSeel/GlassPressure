@@ -196,7 +196,7 @@ The previous water renderer still looked like a blue polygonal fill. The present
 - receiver water reacts to transferred flow and escaped-body motion;
 - the numerical fill level remains authoritative; waves only perturb the rendered surface.
 
-This is still a game-fluid renderer rather than full CFD, but it must visually read as a moving liquid rather than a scaled translucent cylinder.
+This is still a game-fluid renderer rather than full CFD, but it must visually read as a moving liquid rather than a scaled translucent cylinder. Parent-cup overflow now produces visible falling droplets from changing points around the rim, while drilled-hole streams continue to originate from their actual target position.
 
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
@@ -221,7 +221,7 @@ Current interaction usability: the thin torus is no longer the only pickable geo
 4. [x] Make Level 1 require drilling the inner nested body and physically escaping the parent cup.
 5. Add a third nested glass object with a different visual shape so Level 1 demonstrates a true multi-layer nest, not only two bodies.
 6. [x] Replace the first spherical nested visuals with open glass cup/bell forms while retaining stable spherical collision proxies.
-7. Add visual water transfer from parent cup overflow/holes into the surrounding chamber at the actual transfer locations.
+7. [x] Add visual water transfer from parent cup overflow at the actual rim locations; drilled-hole streams already originate from the target position.
 8. [x] Replace capped blue fill meshes with open-sided depth volume + dedicated animated liquid shader surface.
 9. [x] Add persistent slosh, inlet ripple propagation and body-driven local water disturbances.
 10. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
