@@ -140,9 +140,9 @@ Generate constrained puzzle graphs, never arbitrary impossible geometry:
 - [x] pressure/head-based outflow
 - [x] first rigid-body force coupling
 - [x] first jet reaction coupling
-- [ ] true tool model with approach/contact/retract states
-- [ ] fixed-step accumulator independent of render FPS
-- [ ] actual submerged-volume buoyancy
+- [x] visible drill model with approach/contact/drill/breakthrough/retract states\n- [ ] surface-normal alignment and physical contact validation
+- [x] fixed-step accumulator independent of render FPS
+- [x] submerged-volume buoyancy for the first dynamic sphere
 - [ ] crack visualization and failure
 - [ ] multi-step objective completion
 - [ ] reset/retry flow
