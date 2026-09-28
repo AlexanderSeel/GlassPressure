@@ -135,7 +135,7 @@ Planned tools:
 - [ ] production glass strategy
 - [ ] dynamic water surfaces
 - [x] first pooled flow droplets/bubbles driven by simulated outflow
-- [ ] quality tiers
+- [x] first automatic Low/Medium/High render quality presets
 - [ ] caustics approximation
 - [ ] Botanical Atrium
 - [ ] two additional environments
@@ -175,12 +175,12 @@ The first two levels are now data-driven. Level 1 has two drillable regions:
 
 Both openings can coexist, so target order matters. Opening the pressure-relief vent first reduces the effective pressure contribution to main-drain stress and slightly improves drilling progress on the main drain, while transferring less water. Target approach quality is evaluated against the vessel surface normal obtained from a ray/mesh intersection, with a safe fallback for edge cases.
 
-Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals now live in a dedicated `DrillTargetRuntime` module instead of the main game class. HUD DOM binding/rendering is isolated in `HudController`, so gameplay code only publishes telemetry snapshots.
+Level 2 (`Moving Pressure`) increases inlet flow, reduces target sizes and moves the entire upper vessel laterally/vertically, so the player must time approach and contact while the target moves. `N` cycles between the current handcrafted levels.\n\nThe water meshes and basin geometry remain prototype quality; they represent deterministic state but are not yet production fluid rendering. An automatic Low/Medium/High quality preset now scales render resolution, glass refraction intensity and the pooled flow-particle budget without changing gameplay physics. Target creation, crack visuals, material state, reset/failure rendering and ray-derived surface normals now live in a dedicated `DrillTargetRuntime` module instead of the main game class. HUD DOM binding/rendering is isolated in `HudController`, so gameplay code only publishes telemetry snapshots.
 
 ## Next implementation batch
 1. Continue splitting `Game.ts`: move level runtime/state transitions out next; target runtime and HUD are isolated.
-2. Introduce a quality tier so transparent-water effects can scale down independently from gameplay physics.
-3. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
-4. Add a first authored break region with bounded glass fragments.
-5. Replace the prototype jet cylinder with a tapered/animated stream mesh and receiver splash.
-6. Add level 3 with an asymmetrical vessel/target layout and a stronger jet-routing requirement.
+2. Add contained-water mass coupling so draining a vessel also changes its rigid-body mass behavior.
+3. Add a first authored break region with bounded glass fragments.
+4. Replace the prototype jet cylinder with a tapered/animated stream mesh and receiver splash.
+5. Add level 3 with an asymmetrical vessel/target layout and a stronger jet-routing requirement.
+6. Add a manual quality override in settings after the settings/menu shell exists.

@@ -28,6 +28,7 @@ import { FlowVisuals } from "./scene/FlowVisuals";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
+import { selectInitialQuality } from "./quality/QualitySettings";
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
 const RECEIVER_BASE_Y = 0.65;
@@ -47,6 +48,11 @@ export class Game {
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
   private readonly hud = new HudController();
+  private readonly quality = selectInitialQuality(
+    navigator.hardwareConcurrency,
+    navigator.maxTouchPoints,
+    window.devicePixelRatio,
+  );
 
   private camera!: ArcRotateCamera;
   private vessel!: FluidCompartment;
@@ -77,6 +83,7 @@ export class Game {
       stencil: true,
       adaptToDeviceRatio: true,
     });
+    this.engine.setHardwareScalingLevel(this.quality.hardwareScalingLevel);
     this.scene = new Scene(this.engine);
   }
 
@@ -144,13 +151,21 @@ export class Game {
       this.scene,
     );
     chamber.position.y = 3.2;
-    chamber.material = createGlassMaterial("chamber-glass", this.scene);
+    chamber.material = createGlassMaterial(
+      "chamber-glass",
+      this.scene,
+      this.quality.glassRefractionIntensity,
+    );
     chamber.visibility = 0.22;
     chamber.isPickable = false;
   }
 
   private createPuzzle(): void {
-    const glass = createGlassMaterial("vessel-glass", this.scene);
+    const glass = createGlassMaterial(
+      "vessel-glass",
+      this.scene,
+      this.quality.glassRefractionIntensity,
+    );
     const water = createWaterMaterial("water", this.scene);
 
     const outer = MeshBuilder.CreateCylinder(
@@ -231,7 +246,10 @@ export class Game {
     );
     this.jetMesh.material = water;
     this.jetMesh.visibility = 0;
-    this.flowVisuals = new FlowVisuals(this.scene);
+    this.flowVisuals = new FlowVisuals(
+      this.scene,
+      this.quality.flowParticlePoolSize,
+    );
     this.jetMesh.isPickable = false;
 
     const inlet = MeshBuilder.CreateCylinder(
@@ -714,6 +732,7 @@ export class Game {
       hydraulicHeadMeters: this.hydraulicHeadMeters,
       innerHeightScene: bodyPosition.y,
       bodySpeedScenePerSecond: bodyVelocity.length(),
+      qualityTier: this.quality.tier,
     });
   }
 

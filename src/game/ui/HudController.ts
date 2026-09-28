@@ -18,6 +18,7 @@ export type HudSnapshot = {
   hydraulicHeadMeters: number;
   innerHeightScene: number;
   bodySpeedScenePerSecond: number;
+  qualityTier: string;
 };
 
 export class HudController {
@@ -36,6 +37,7 @@ export class HudController {
     innerHeight: this.byId("inner-height"),
     bodyVelocity: this.byId("body-velocity"),
     selectedTarget: this.byId("selected-target"),
+    quality: this.byId("quality-tier"),
   };
 
   public render(snapshot: HudSnapshot): void {
@@ -73,6 +75,7 @@ export class HudController {
       `${snapshot.innerHeightScene.toFixed(2)} m`;
     this.elements.bodyVelocity.textContent =
       `${snapshot.bodySpeedScenePerSecond.toFixed(2)} m/s`;
+    this.elements.quality.textContent = snapshot.qualityTier.toUpperCase();
   }
 
   private byId(id: string): HTMLElement {
