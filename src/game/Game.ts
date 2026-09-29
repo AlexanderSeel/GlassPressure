@@ -35,6 +35,7 @@ import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision"
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { TargetLeakVisual } from "./scene/TargetLeakVisual";
+import { InletStreamVisual } from "./scene/InletStreamVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -75,6 +76,7 @@ export class Game {
   private sourceRing!: Mesh;
   private drillRoot!: TransformNode;
   private overflowVisuals!: FlowVisuals;
+  private inletVisual!: InletStreamVisual;
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
   private waterMaterial!: PBRMaterial;
@@ -92,6 +94,7 @@ export class Game {
   private lastNestedOutflowM3 = 0;
   private pointerMotion = 0;
   private failed = false;
+  private inletImpactWorld = Vector3.Zero();
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, {
