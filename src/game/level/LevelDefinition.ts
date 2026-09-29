@@ -89,7 +89,7 @@ export const FIRST_LEVEL: LevelDefinition = {
     initialPosition: [-0.58, 2.34, -0.05],
     baseMassKg: 0.13,
     fluidCapacityM3: 0.00048,
-    initialFluidVolumeM3: 0.00034,
+    initialFluidVolumeM3: 0.00012,
     fluidHeightMeters: 0.085,
   },
   targets: [

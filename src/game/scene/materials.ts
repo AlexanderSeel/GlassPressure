@@ -114,11 +114,11 @@ export function createWaterSurfaceMaterial(
       vec3 deep = baseColor * 0.52;
       vec3 shallow = baseColor * 1.22 + vec3(0.02, 0.08, 0.10);
       vec3 color = mix(deep, shallow, 0.42 + fresnel * 0.48);
-      color += vec3(specular * (0.45 + agitation * 0.45));
+      color += vec3(specular * (0.34 + agitation * 0.38));
       color += vec3(0.015, 0.035, 0.045) * micro * a;
 
-      float alpha = 0.48 + fresnel * 0.32 + specular * 0.12;
-      gl_FragColor = vec4(color, clamp(alpha, 0.38, 0.88));
+      float alpha = 0.28 + fresnel * 0.34 + specular * 0.18;
+      gl_FragColor = vec4(color, clamp(alpha, 0.24, 0.72));
     }
   `;
 
@@ -147,6 +147,6 @@ export function createWaterSurfaceMaterial(
   material.setFloat("time", 0);
   material.setFloat("agitation", 0);
   material.setVector3("cameraPosition", Vector3.Zero());
-  material.setColor3("baseColor", new Color3(0.035, 0.43, 0.58));
+  material.setColor3("baseColor", new Color3(0.018, 0.24, 0.34));
   return material;
 }

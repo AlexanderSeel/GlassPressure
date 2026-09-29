@@ -20,6 +20,12 @@ import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyan
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
+import {
+  receiverSurfaceWorldY,
+  receiverWaterHeightScene,
+  sourceSurfaceLocalY,
+  sourceWaterHeightScene,
+} from "./simulation/WaterLevels";
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial, createWaterSurfaceMaterial } from "./scene/materials";
 import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
@@ -37,7 +43,6 @@ import { readQualityPreference, SettingsController } from "./ui/SettingsControll
 
 const DIAMETERS = [0.006, 0.01, 0.016] as const;
 const RECEIVER_BASE_Y = 0.2;
-const RECEIVER_WATER_HEIGHT_SCENE = 4.85;
 const INNER_RADIUS_SCENE = 0.575;
 const SCENE_TO_METERS = 0.1;
 const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
@@ -286,7 +291,7 @@ export class Game {
     this.dynamicBody = new PhysicsAggregate(
       inner,
       PhysicsShapeType.SPHERE,
-      { mass: 0.22, restitution: 0.08, friction: 0.45 },
+      { mass: 0.43, restitution: 0.08, friction: 0.45 },
       this.scene,
     );
 
@@ -786,14 +791,12 @@ export class Game {
     transferredM3 = 0,
   ): void {
     const upperFill = this.fluid.getFillRatio(this.vessel);
-    const upperHeight = 0.04 + upperFill * 1.68;
+    const upperHeight = sourceWaterHeightScene(upperFill);
     this.upperWaterMesh.scaling.y = upperHeight;
-    this.upperWaterMesh.position.y = -0.86 + upperHeight * 0.5;
+    this.upperWaterMesh.position.y =
+      sourceSurfaceLocalY(upperFill) - upperHeight * 0.5;
 
-    const lowerHeight = Math.max(
-      0.025,
-      this.receiverFill * RECEIVER_WATER_HEIGHT_SCENE,
-    );
+    const lowerHeight = receiverWaterHeightScene(this.receiverFill);
     this.receiverWaterMesh.scaling.y = lowerHeight;
     this.receiverWaterMesh.position.y = RECEIVER_BASE_Y + lowerHeight * 0.5;
 
@@ -823,7 +826,7 @@ export class Game {
       : bodyVelocity;
 
     this.upperWaterSurface.update({
-      surfaceY: -0.86 + upperHeight,
+      surfaceY: sourceSurfaceLocalY(upperFill),
       fill01: upperFill,
       agitation01: Math.min(
         1,

@@ -136,7 +136,7 @@ Planned tools:
 
 ### M5 — Visual identity
 - [ ] production glass strategy
-- [x] first dynamic water surface/slosh layer driven by authoritative fill state
+- [x] dense dynamic water surface/slosh layer driven by authoritative fill state
 - [x] first pooled flow droplets/bubbles driven by simulated outflow
 - [x] first automatic Low/Medium/High render quality presets
 - [ ] caustics approximation
@@ -200,6 +200,20 @@ The previous water renderer still looked like a blue polygonal fill. The present
 
 This is still a game-fluid renderer rather than full CFD, but it must visually read as a moving liquid rather than a scaled translucent cylinder. Parent-cup overflow now produces visible falling droplets from changing points around the rim, while drilled-hole streams continue to originate from their actual target position.
 
+## Buoyancy/water coupling correction — 2026-09-29
+
+The water surface and buoyancy previously used separate height formulas. That allowed a vessel to appear detached from the rendered water and made tuning misleading.
+
+Corrections:
+- source and receiver fill-to-height math now lives in one tested `WaterLevels` utility;
+- rendering and buoyancy both consume those exact values;
+- the parent cup collision wall ends slightly below the visible rim so dynamic cups cannot balance forever on the flat top of segmented wall colliders;
+- Level 1 nested-cup mass/contained-water values are recalibrated so the cups are positively buoyant and settle partially submerged instead of becoming neutral/pinned;
+- the primary floating cup mass is increased so it follows the waterline rather than shooting to the rim;
+- the inlet is no longer a static cylinder: it is an animated curved stream with a moving impact point and droplets;
+- the water surface is now a dense radial mesh, not a simple Babylon disc, so inlet/body waves physically deform interior vertices;
+- inlet ripple origin follows the moving impact point.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -228,6 +242,9 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 7. [x] Add visual water transfer from parent cup overflow at the actual rim locations; drilled-hole streams already originate from the target position.
 8. [x] Replace capped blue fill meshes with open-sided depth volume + dedicated animated liquid shader surface.
 9. [x] Add persistent slosh, inlet ripple propagation and body-driven local water disturbances.
-10. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
-11. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
-12. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.
+10. [x] Unify rendered and physical water-surface heights through tested shared water-level functions.
+11. [x] Replace static inlet cylinder with animated curved stream + moving impact point.
+12. [x] Recalibrate Level 1 floating-body masses so vessels track the waterline.
+13. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
+14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
+15. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

@@ -29,6 +29,11 @@ export function createOpenCupCollision(
   const bottomThickness = 0.12;
   const bottomY = center.y - height * 0.5;
   const rimY = center.y + height * 0.5;
+  // Keep the collision wall slightly below the visible rim. A dynamic
+  // vessel should roll/float across the rim instead of balancing forever
+  // on the flat top face of a box-segment collider.
+  const collisionWallHeight = Math.max(0.3, height - 0.3);
+  const collisionWallCenterY = bottomY + collisionWallHeight * 0.5;
 
   const floor = MeshBuilder.CreateCylinder(
     `${name}-floor`,
@@ -61,7 +66,7 @@ export function createOpenCupCollision(
       `${name}-wall-${i}`,
       {
         width: segmentWidth,
-        height,
+        height: collisionWallHeight,
         depth: thickness,
       },
       scene,
@@ -69,7 +74,7 @@ export function createOpenCupCollision(
 
     wall.position.copyFromFloats(
       center.x + Math.sin(angle) * innerRadius,
-      center.y,
+      collisionWallCenterY,
       center.z + Math.cos(angle) * innerRadius,
     );
     wall.rotation.y = angle;

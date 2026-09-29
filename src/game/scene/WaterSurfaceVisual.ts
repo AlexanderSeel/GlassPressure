@@ -1,11 +1,11 @@
 import {
   Mesh,
-  MeshBuilder,
   Scene,
   ShaderMaterial,
   TransformNode,
   Vector3,
   VertexBuffer,
+  VertexData,
 } from "@babylonjs/core";
 
 export type WaterSurfaceUpdate = {
@@ -50,20 +50,18 @@ export class WaterSurfaceVisual {
     radius: number,
     private readonly material: ShaderMaterial,
     parent: TransformNode | null = null,
-    segments = 64,
+    segments = 72,
     waveAmplitude = 0.045,
   ) {
     this.radius = radius;
     this.waveAmplitude = waveAmplitude;
 
-    this.mesh = MeshBuilder.CreateDisc(
-      name,
-      {
-        radius,
-        tessellation: segments,
-        sideOrientation: Mesh.DOUBLESIDE,
-      },
+    this.mesh = createRadialWaterMesh(
       scene,
+      name,
+      radius,
+      Math.max(48, segments),
+      20,
     );
     this.mesh.rotation.x = Math.PI / 2;
     this.mesh.material = material;
@@ -86,33 +84,41 @@ export class WaterSurfaceVisual {
     const velocityZ = state.velocityZ ?? 0;
 
     this.mesh.position.y = state.surfaceY;
-    this.mesh.visibility = fill <= 0.001 ? 0 : 0.92;
+    this.mesh.visibility = fill <= 0.001 ? 0 : 0.94;
 
     this.updateSloshTilt(velocityX, velocityZ, agitation, dt);
     this.mesh.rotation.x = Math.PI / 2 + this.tiltX;
     this.mesh.rotation.z = this.tiltZ;
 
     this.rippleCooldown -= dt;
-    if (inlet > 0.04 && this.rippleCooldown <= 0) {
-      this.addDisturbance(0, 0, 0.22 + inlet * 0.65);
-      this.rippleCooldown = 0.16 - inlet * 0.07;
-    }
-    if (disturbance > 0.08 && this.rippleCooldown <= 0.08) {
+    if (inlet > 0.025 && this.rippleCooldown <= 0) {
       this.addDisturbance(
         state.disturbanceX ?? 0,
         state.disturbanceZ ?? 0,
-        0.18 + disturbance * 0.7,
+        0.3 + inlet * 0.65,
+      );
+      this.rippleCooldown = Math.max(0.055, 0.13 - inlet * 0.06);
+    }
+
+    if (disturbance > 0.08 && this.rippleCooldown <= 0.045) {
+      this.addDisturbance(
+        state.disturbanceX ?? 0,
+        state.disturbanceZ ?? 0,
+        0.18 + disturbance * 0.72,
       );
     }
 
     for (const ripple of this.disturbances) ripple.age += dt;
-    while (this.disturbances.length > 0 && this.disturbances[0]!.age > 2.6) {
+    while (
+      this.disturbances.length > 0 &&
+      this.disturbances[0]!.age > 2.8
+    ) {
       this.disturbances.shift();
     }
 
     const positions = [...this.basePositions];
     const baseAmplitude =
-      this.waveAmplitude * (0.22 + agitation * 0.52 + inlet * 0.24);
+      this.waveAmplitude * (0.16 + agitation * 0.48 + inlet * 0.2);
     const time = state.timeSeconds;
 
     for (let i = 0; i < positions.length; i += 3) {
@@ -122,35 +128,35 @@ export class WaterSurfaceVisual {
         1,
         Math.hypot(x, z) / Math.max(0.001, this.radius),
       );
-      const edgeDamping = Math.max(0.2, 1 - radial * 0.62);
+      const edgeDamping = Math.max(0.3, 1 - radial * 0.52);
 
       let height =
         (
-          Math.sin(x * 3.2 + time * 2.6) * 0.34 +
-          Math.cos(z * 4.0 - time * 2.1) * 0.28 +
-          Math.sin((x + z) * 2.4 + time * 1.55) * 0.18
+          Math.sin(x * 3.1 + time * 2.25) * 0.28 +
+          Math.cos(z * 3.7 - time * 1.82) * 0.22 +
+          Math.sin((x + z) * 2.15 + time * 1.43) * 0.14
         ) *
         baseAmplitude *
         edgeDamping;
 
-      // Continuous inlet pulse: visible concentric waves spreading from center.
       if (inlet > 0.02) {
-        const centerDistance = Math.hypot(x, z);
+        const ix = state.disturbanceX ?? 0;
+        const iz = state.disturbanceZ ?? 0;
+        const impactDistance = Math.hypot(x - ix, z - iz);
         height +=
-          Math.sin(centerDistance * 9.5 - time * 8.4) *
-          Math.exp(-centerDistance * 0.55) *
+          Math.sin(impactDistance * 12.0 - time * 9.2) *
+          Math.exp(-impactDistance * 0.72) *
           this.waveAmplitude *
           inlet *
-          0.78;
+          0.9;
       }
 
-      // Local body/jet disturbances propagate as damped rings.
       for (const ripple of this.disturbances) {
         const distance = Math.hypot(x - ripple.x, z - ripple.z);
-        const ageDamping = Math.exp(-ripple.age * 1.35);
-        const spatialDamping = Math.exp(-distance * 0.52);
+        const ageDamping = Math.exp(-ripple.age * 1.18);
+        const spatialDamping = Math.exp(-distance * 0.48);
         height +=
-          Math.sin(distance * 11.5 - ripple.age * 10.5) *
+          Math.sin(distance * 12.4 - ripple.age * 11.2) *
           ageDamping *
           spatialDamping *
           this.waveAmplitude *
@@ -161,10 +167,12 @@ export class WaterSurfaceVisual {
     }
 
     this.mesh.updateVerticesData(VertexBuffer.PositionKind, positions);
+    this.mesh.refreshBoundingInfo();
+
     this.material.setFloat("time", state.timeSeconds);
     this.material.setFloat(
       "agitation",
-      clamp01(agitation * 0.8 + inlet * 0.35 + disturbance * 0.3),
+      clamp01(agitation * 0.75 + inlet * 0.38 + disturbance * 0.32),
     );
     this.material.setVector3("cameraPosition", state.cameraPosition);
   }
@@ -175,11 +183,19 @@ export class WaterSurfaceVisual {
     agitation: number,
     dt: number,
   ): void {
-    const targetX = clamp(-velocityZ * (0.024 + agitation * 0.055), -0.11, 0.11);
-    const targetZ = clamp(velocityX * (0.024 + agitation * 0.055), -0.11, 0.11);
+    const targetX = clamp(
+      -velocityZ * (0.03 + agitation * 0.06),
+      -0.12,
+      0.12,
+    );
+    const targetZ = clamp(
+      velocityX * (0.03 + agitation * 0.06),
+      -0.12,
+      0.12,
+    );
 
-    const stiffness = 20;
-    const damping = 5.2;
+    const stiffness = 17;
+    const damping = 4.6;
 
     this.tiltVelocityX += (targetX - this.tiltX) * stiffness * dt;
     this.tiltVelocityZ += (targetZ - this.tiltZ) * stiffness * dt;
@@ -189,7 +205,11 @@ export class WaterSurfaceVisual {
     this.tiltZ += this.tiltVelocityZ * dt;
   }
 
-  private addDisturbance(x: number, z: number, strength: number): void {
+  private addDisturbance(
+    x: number,
+    z: number,
+    strength: number,
+  ): void {
     this.disturbances.push({
       x: clamp(x, -this.radius, this.radius),
       z: clamp(z, -this.radius, this.radius),
@@ -197,8 +217,66 @@ export class WaterSurfaceVisual {
       age: 0,
     });
 
-    while (this.disturbances.length > 12) this.disturbances.shift();
+    while (this.disturbances.length > 16) this.disturbances.shift();
   }
+}
+
+function createRadialWaterMesh(
+  scene: Scene,
+  name: string,
+  radius: number,
+  angularSegments: number,
+  radialSegments: number,
+): Mesh {
+  const positions: number[] = [0, 0, 0];
+  const normals: number[] = [0, 0, 1];
+  const indices: number[] = [];
+
+  for (let ring = 1; ring <= radialSegments; ring += 1) {
+    const r = radius * (ring / radialSegments);
+    for (let segment = 0; segment < angularSegments; segment += 1) {
+      const angle = (segment / angularSegments) * Math.PI * 2;
+      positions.push(
+        Math.sin(angle) * r,
+        Math.cos(angle) * r,
+        0,
+      );
+      normals.push(0, 0, 1);
+    }
+  }
+
+  const firstRingStart = 1;
+  for (let segment = 0; segment < angularSegments; segment += 1) {
+    const next = (segment + 1) % angularSegments;
+    indices.push(
+      0,
+      firstRingStart + segment,
+      firstRingStart + next,
+    );
+  }
+
+  for (let ring = 1; ring < radialSegments; ring += 1) {
+    const innerStart = 1 + (ring - 1) * angularSegments;
+    const outerStart = 1 + ring * angularSegments;
+
+    for (let segment = 0; segment < angularSegments; segment += 1) {
+      const next = (segment + 1) % angularSegments;
+      const a = innerStart + segment;
+      const b = innerStart + next;
+      const c = outerStart + segment;
+      const d = outerStart + next;
+
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+
+  const mesh = new Mesh(name, scene);
+  const vertexData = new VertexData();
+  vertexData.positions = positions;
+  vertexData.normals = normals;
+  vertexData.indices = indices;
+  vertexData.applyToMesh(mesh, true);
+  return mesh;
 }
 
 function clamp01(value: number): number {
