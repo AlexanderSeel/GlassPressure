@@ -279,6 +279,17 @@ Current cubemaps are lightweight Babylon Playground assets used only to prove th
 
 The environment must support the gameplay rather than obscure it: target contrast, glass edges and water surface readability take priority over scenic complexity.
 
+## Water / vessel boundary pass — 2026-09-29
+
+To make the liquid read around moving glass rather than only across the whole surface:
+- primary and nested dynamic vessels now get a local meniscus/waterline ring at the exact authoritative water height;
+- the ring stretches in the direction of horizontal velocity to read as a wake;
+- the cue fades when the vessel is clearly above or below the surface;
+- crossing the water surface with meaningful vertical speed produces a short expanding splash-ring pulse;
+- these cues use the same `waterSurfaceForBody(...)` result as buoyancy, so the visible boundary and physics boundary stay aligned.
+
+This is intentionally subtle and local. It should improve the perception of glass actually occupying and displacing water without reintroducing exaggerated global waves.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -319,8 +330,8 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 19. [x] Make directional-wave shader normals visibly affect reflection/transmission without increasing wave height.
 20. [x] Add level-specific six-face cubemap skybox switching and use it for glass/water reflections.
 21. [x] Document production skybox asset contract and CC0 replacement candidates.
-22. Add waterline/meniscus and local wake cues around partially submerged vessels.
-23. Add entry/exit splash bursts and bubbles when vessels cross the water surface.
+22. [x] Add waterline/meniscus and velocity-stretched local wake cues around partially submerged vessels.
+23. [x] Add surface-crossing splash-ring pulses; bubble particle bursts remain a later polish item.
 24. Add first caustics approximation driven by water normal/lighting.
 25. Replace development cubemaps with optimized local production skybox faces.
 26. Only after Level 1 visually/mechanically matches the original concept, resume broader tool/environment polish.

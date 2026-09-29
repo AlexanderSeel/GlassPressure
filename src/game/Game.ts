@@ -38,6 +38,7 @@ import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { TargetLeakVisual } from "./scene/TargetLeakVisual";
 import { InletStreamVisual } from "./scene/InletStreamVisual";
 import { DrillContactVisual } from "./scene/DrillContactVisual";
+import { WaterContactVisual } from "./scene/WaterContactVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -81,6 +82,8 @@ export class Game {
   private overflowVisuals!: FlowVisuals;
   private inletVisual!: InletStreamVisual;
   private drillContactVisual!: DrillContactVisual;
+  private primaryWaterContact!: WaterContactVisual;
+  private nestedWaterContact!: WaterContactVisual;
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
   private waterMaterial!: PBRMaterial;
@@ -367,7 +370,16 @@ export class Game {
       this.scene,
       Math.max(12, Math.floor(this.quality.flowParticlePoolSize * 0.75)),
     );
-
+    this.primaryWaterContact = new WaterContactVisual(
+      this.scene,
+      "primary-water-contact",
+      INNER_RADIUS_SCENE,
+    );
+    this.nestedWaterContact = new WaterContactVisual(
+      this.scene,
+      "nested-water-contact",
+      0.48,
+    );
 
     this.vessel = {
       id: "upper",
@@ -531,6 +543,7 @@ export class Game {
     this.updateOverflowVisuals(result.overflowM3, dt);
     this.breakVisuals.update(dt);
     this.updateWaterVisuals(dt, transferredM3);
+    this.updateWaterContactVisuals(dt);
 
     this.runtime.evaluate({
       glassFailed: this.failed,
@@ -908,6 +921,31 @@ export class Game {
     });
   }
 
+  private updateWaterContactVisuals(dt: number): void {
+    const primaryPosition =
+      this.dynamicBody.transformNode.getAbsolutePosition();
+    const primaryVelocity =
+      this.dynamicBody.body.getLinearVelocity();
+    this.primaryWaterContact.update(
+      dt,
+      primaryPosition,
+      primaryVelocity,
+      this.waterSurfaceForBody(primaryPosition),
+    );
+
+    if (this.nestedVessel.enabled) {
+      const nestedPosition = this.nestedVessel.position;
+      this.nestedWaterContact.update(
+        dt,
+        nestedPosition,
+        this.nestedVessel.linearVelocity,
+        this.waterSurfaceForBody(nestedPosition),
+      );
+    } else {
+      this.nestedWaterContact.reset();
+    }
+  }
+
   private nextLevel(): void {
     this.runtime.next();
     this.applyLevelEnvironment();
@@ -991,6 +1029,8 @@ export class Game {
     this.overflowVisuals.reset();
     this.inletVisual.reset();
     this.drillContactVisual.reset();
+    this.primaryWaterContact.reset();
+    this.nestedWaterContact.reset();
     this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(
