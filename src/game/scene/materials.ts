@@ -158,6 +158,7 @@ export function createWaterSurfaceMaterial(
     uniform vec3 cameraPosition;
     uniform vec3 baseColor;
     uniform float agitation;
+    uniform samplerCube environmentMap;
 
     varying vec3 vWorldPosition;
     varying vec3 vWorldNormal;
@@ -185,10 +186,15 @@ export function createWaterSurfaceMaterial(
       );
 
       vec3 reflected = reflect(-viewDir, normal);
-      float skyBlend = clamp(reflected.y * 0.5 + 0.5, 0.0, 1.0);
-      vec3 horizon = vec3(0.08, 0.16, 0.19);
-      vec3 sky = vec3(0.32, 0.46, 0.5);
-      vec3 reflectionTint = mix(horizon, sky, skyBlend);
+      vec3 reflectionTint = textureCube(
+        environmentMap,
+        reflected
+      ).rgb;
+      reflectionTint = mix(
+        reflectionTint,
+        vec3(0.12, 0.2, 0.22),
+        0.12
+      );
 
       float movingBand =
         sin(
@@ -239,6 +245,7 @@ export function createWaterSurfaceMaterial(
         "cameraPosition",
         "baseColor",
       ],
+      samplers: ["environmentMap"],
       needAlphaBlending: true,
     },
   );
@@ -252,5 +259,8 @@ export function createWaterSurfaceMaterial(
   material.setVector2("flowDirection", Vector2.Zero());
   material.setVector3("cameraPosition", Vector3.Zero());
   material.setColor3("baseColor", new Color3(0.025, 0.27, 0.36));
+  if (scene.environmentTexture) {
+    material.setTexture("environmentMap", scene.environmentTexture);
+  }
   return material;
 }

@@ -140,9 +140,12 @@ Planned tools:
 - [x] dense dynamic water surface/slosh layer driven by authoritative fill state
 - [x] first pooled flow droplets/bubbles driven by simulated outflow
 - [x] first automatic Low/Medium/High render quality presets
+- [x] level-driven six-face cubemap environment system
+- [x] use active cubemap for PBR glass and custom water reflections
+- [ ] replace development cubemaps with local licensed/CC0 production assets
 - [ ] caustics approximation
-- [ ] Botanical Atrium
-- [ ] two additional environments
+- [ ] Botanical Atrium production asset pass
+- [ ] two additional production environment asset passes
 - [ ] polished tool models
 
 ### M6 — Additional tools
@@ -259,6 +262,23 @@ Player-facing drilling feedback now comes primarily from the 3D world:
 
 The water shader pass is also made visually legible through moving analytical normals affecting Fresnel/reflection/transmission, while keeping geometric displacement small.
 
+## Environment / cubemap pass — 2026-09-29
+
+The empty dark box is no longer the intended environment strategy.
+
+Implemented:
+- every handcrafted level now declares an `environmentId`;
+- the environment scene can switch six-face Babylon `CubeTexture` skyboxes at runtime;
+- all six current levels have distinct development cubemaps;
+- switching levels changes skybox, clear color, floor tone, ambient light, key-light intensity and environment intensity;
+- the active cubemap is assigned to `scene.environmentTexture`, so PBR glass receives level-specific reflections;
+- the custom water shader now samples the same cubemap using its analytical moving surface normal, so shader motion affects actual reflected environment detail instead of only a hard-coded tint;
+- `docs/SKYBOXES.md` defines the six-image naming contract and production licensing rules.
+
+Current cubemaps are lightweight Babylon Playground assets used only to prove the pipeline. Production environments should be local optimized assets. Preferred final source direction is CC0 HDRI material converted to cubemap faces; Poly Haven candidates are documented in `docs/SKYBOXES.md`.
+
+The environment must support the gameplay rather than obscure it: target contrast, glass edges and water surface readability take priority over scenic complexity.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -297,4 +317,10 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 17. [x] Replace form-like drilling progress with bore growth, fine crack branches, tool vibration, contact debris and breakthrough pulse.
 18. [x] Hide the normal-play HUD drilling progress bar; world feedback is primary.
 19. [x] Make directional-wave shader normals visibly affect reflection/transmission without increasing wave height.
-20. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.
+20. [x] Add level-specific six-face cubemap skybox switching and use it for glass/water reflections.
+21. [x] Document production skybox asset contract and CC0 replacement candidates.
+22. Add waterline/meniscus and local wake cues around partially submerged vessels.
+23. Add entry/exit splash bursts and bubbles when vessels cross the water surface.
+24. Add first caustics approximation driven by water normal/lighting.
+25. Replace development cubemaps with optimized local production skybox faces.
+26. Only after Level 1 visually/mechanically matches the original concept, resume broader tool/environment polish.

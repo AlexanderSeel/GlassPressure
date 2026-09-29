@@ -10,6 +10,7 @@ import {
   PhysicsShapeType,
   PBRMaterial,
   Scene,
+  ShaderMaterial,
   TransformNode,
   Vector3,
 } from "@babylonjs/core";
@@ -29,7 +30,7 @@ import {
 import { drillingEfficiency, stepGlassStress } from "./simulation/GlassStress";
 import { createGlassMaterial, createWaterMaterial, createWaterSurfaceMaterial } from "./scene/materials";
 import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
-import { createEnvironmentScene } from "./scene/EnvironmentScene";
+import { createEnvironmentScene, type EnvironmentSceneController } from "./scene/EnvironmentScene";
 import { createBasinCollision } from "./scene/BasinCollision";
 import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision";
 import { FlowVisuals } from "./scene/FlowVisuals";
@@ -67,6 +68,7 @@ export class Game {
   );
 
   private camera!: ArcRotateCamera;
+  private environmentController!: EnvironmentSceneController;
   private vessel!: FluidCompartment;
   private upperWaterMesh!: Mesh;
   private receiverWaterMesh!: Mesh;
@@ -82,6 +84,7 @@ export class Game {
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
   private waterMaterial!: PBRMaterial;
+  private readonly waterSurfaceMaterials: ShaderMaterial[] = [];
   private readonly leakVisuals = new Map<string, TargetLeakVisual>();
   private sourceCupCollision: CupCollision | null = null;
 
@@ -133,11 +136,13 @@ export class Game {
   }
 
   private createEnvironment(): void {
-    this.camera = createEnvironmentScene(
+    this.environmentController = createEnvironmentScene(
       this.scene,
       this.canvas,
       this.quality,
+      this.level.environmentId,
     );
+    this.camera = this.environmentController.camera;
   }
 
   private createPuzzle(): void {
@@ -156,6 +161,11 @@ export class Game {
       "receiver-water-surface-material",
       this.scene,
     );
+    this.waterSurfaceMaterials.push(
+      upperSurfaceMaterial,
+      receiverSurfaceMaterial,
+    );
+    this.bindWaterEnvironment();
 
     const outer = MeshBuilder.CreateCylinder(
       "outer-vessel",
@@ -900,8 +910,27 @@ export class Game {
 
   private nextLevel(): void {
     this.runtime.next();
+    this.applyLevelEnvironment();
     this.rebuildTargets();
     this.resetLevel();
+  }
+
+  private applyLevelEnvironment(): void {
+    if (!this.environmentController) return;
+    const texture = this.environmentController.applyEnvironment(
+      this.level.environmentId,
+    );
+    for (const material of this.waterSurfaceMaterials) {
+      material.setTexture("environmentMap", texture);
+    }
+  }
+
+  private bindWaterEnvironment(): void {
+    if (!this.environmentController) return;
+    const texture = this.environmentController.getEnvironmentTexture();
+    for (const material of this.waterSurfaceMaterials) {
+      material.setTexture("environmentMap", texture);
+    }
   }
 
   private rebuildTargets(): void {
@@ -930,6 +959,7 @@ export class Game {
   }
 
   private resetLevel(): void {
+    this.applyLevelEnvironment();
     this.fixedStep.reset();
     this.drill.reset();
     this.vessel.capacityM3 = this.level.sourceCapacityM3;

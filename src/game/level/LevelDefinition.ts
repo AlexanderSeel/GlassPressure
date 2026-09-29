@@ -1,4 +1,5 @@
 import type { LevelGoal } from "./LevelState";
+import type { EnvironmentId } from "../scene/EnvironmentScene";
 
 export type DrillTargetEffect = "primary-drain" | "pressure-relief" | "nested-drain";
 export type DrillTargetHost = "source" | "nested";
@@ -47,6 +48,7 @@ export type LevelDefinition = {
   id: string;
   name: string;
   objective: string;
+  environmentId: EnvironmentId;
   initialSourceVolumeM3: number;
   sourceCapacityM3: number;
   sourceHeightMeters: number;
@@ -64,6 +66,7 @@ export type LevelDefinition = {
 
 export const FIRST_LEVEL: LevelDefinition = {
   id: "nested-lift",
+  environmentId: "botanical-atrium",
   name: "Nested Lift",
   objective:
     "Let the parent cup fill, drill its transfer port, then catch the rising inner glass body and drill it before the flow washes it over the rim.",
@@ -138,6 +141,7 @@ export const FIRST_LEVEL: LevelDefinition = {
 
 export const SECOND_LEVEL: LevelDefinition = {
   id: "moving-pressure",
+  environmentId: "dark-laboratory",
   name: "Moving Pressure",
   objective: "Control pressure while the upper vessel moves, then lift the inner vessel.",
   initialSourceVolumeM3: 0.0093,
@@ -196,6 +200,7 @@ export const SECOND_LEVEL: LevelDefinition = {
 
 export const THIRD_LEVEL: LevelDefinition = {
   id: "jet-routing",
+  environmentId: "ocean-observatory",
   name: "Jet Routing",
   objective: "Drain and lift the inner vessel into the right-side routing zone.",
   initialSourceVolumeM3: 0.009,
@@ -261,6 +266,7 @@ export const THIRD_LEVEL: LevelDefinition = {
 
 export const FOURTH_LEVEL: LevelDefinition = {
   id: "nested-release",
+  environmentId: "white-gallery",
   name: "Nested Release",
   objective:
     "Fill the lower receiver, float the nested vessel into reach, then drain it to release its trapped weight.",
@@ -332,6 +338,7 @@ export const FOURTH_LEVEL: LevelDefinition = {
 
 export const FIFTH_LEVEL: LevelDefinition = {
   id: "rotating-collar",
+  environmentId: "desert-station",
   name: "Rotating Collar",
   objective:
     "Time the rotating collar, drain the source and keep the floating vessel inside the central routing band.",
@@ -424,6 +431,7 @@ export const FIFTH_LEVEL: LevelDefinition = {
 
 export const SIXTH_LEVEL: LevelDefinition = {
   id: "gyro-nest",
+  environmentId: "neon-night-lab",
   name: "Gyro Nest",
   objective:
     "Stabilize pressure, feed the receiver, expose and drain the nested vessel, then keep the released body near center.",

@@ -67,4 +67,9 @@ describe("LevelDefinition", () => {
     expect(SIXTH_LEVEL.targets.some(target => target.effect === "pressure-relief")).toBe(true);
     expect(SIXTH_LEVEL.targets.some(target => target.effect === "nested-drain")).toBe(true);
   });
+
+  it("assigns an environment to every handcrafted level", () => {
+    expect(LEVELS.every(level => level.environmentId.length > 0)).toBe(true);
+    expect(new Set(LEVELS.map(level => level.environmentId)).size).toBe(6);
+  });
 });
