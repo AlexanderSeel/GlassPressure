@@ -39,6 +39,7 @@ import { TargetLeakVisual } from "./scene/TargetLeakVisual";
 import { InletStreamVisual } from "./scene/InletStreamVisual";
 import { DrillContactVisual } from "./scene/DrillContactVisual";
 import { WaterContactVisual } from "./scene/WaterContactVisual";
+import { CausticsVisual } from "./scene/CausticsVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -84,6 +85,7 @@ export class Game {
   private drillContactVisual!: DrillContactVisual;
   private primaryWaterContact!: WaterContactVisual;
   private nestedWaterContact!: WaterContactVisual;
+  private causticsVisual!: CausticsVisual;
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
   private waterMaterial!: PBRMaterial;
@@ -380,6 +382,7 @@ export class Game {
       "nested-water-contact",
       0.48,
     );
+    this.causticsVisual = new CausticsVisual(this.scene);
 
     this.vessel = {
       id: "upper",
@@ -544,6 +547,13 @@ export class Game {
     this.breakVisuals.update(dt);
     this.updateWaterVisuals(dt, transferredM3);
     this.updateWaterContactVisuals(dt);
+    this.causticsVisual.update(
+      this.runtime.elapsedSeconds,
+      Math.max(
+        this.receiverFill,
+        this.fluid.getFillRatio(this.vessel) * 0.55,
+      ),
+    );
 
     this.runtime.evaluate({
       glassFailed: this.failed,
@@ -1031,6 +1041,7 @@ export class Game {
     this.drillContactVisual.reset();
     this.primaryWaterContact.reset();
     this.nestedWaterContact.reset();
+    this.causticsVisual.reset();
     this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(

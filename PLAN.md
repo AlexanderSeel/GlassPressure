@@ -143,7 +143,7 @@ Planned tools:
 - [x] level-driven six-face cubemap environment system
 - [x] use active cubemap for PBR glass and custom water reflections
 - [ ] replace development cubemaps with local licensed/CC0 production assets
-- [ ] caustics approximation
+- [x] first lightweight caustics approximation
 - [ ] Botanical Atrium production asset pass
 - [ ] two additional production environment asset passes
 - [ ] polished tool models
@@ -290,6 +290,16 @@ To make the liquid read around moving glass rather than only across the whole su
 
 This is intentionally subtle and local. It should improve the perception of glass actually occupying and displacing water without reintroducing exaggerated global waves.
 
+## Caustics pass — 2026-09-29
+
+A first restrained caustics approximation now projects moving interference bands onto the floor under the chamber:
+- no additional fluid simulation is introduced;
+- intensity follows authoritative source/receiver fill;
+- the pattern remains low-opacity and is intended as a moving light cue, not a dominant effect;
+- it complements the cubemap-driven water/glass reflections and local meniscus/wake cues.
+
+Later polish can make the caustics react more directly to the active water-normal field and shadowing, but the current version establishes the rendering hook without affecting gameplay.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -332,6 +342,6 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 21. [x] Document production skybox asset contract and CC0 replacement candidates.
 22. [x] Add waterline/meniscus and velocity-stretched local wake cues around partially submerged vessels.
 23. [x] Add surface-crossing splash-ring pulses; bubble particle bursts remain a later polish item.
-24. Add first caustics approximation driven by water normal/lighting.
+24. [x] Add first lightweight animated caustics projection whose intensity follows authoritative water fill.
 25. Replace development cubemaps with optimized local production skybox faces.
 26. Only after Level 1 visually/mechanically matches the original concept, resume broader tool/environment polish.
