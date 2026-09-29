@@ -244,6 +244,21 @@ Implementation direction:
 - authoritative physics water remains a flat fill plane; shader displacement is a small visual skin only;
 - inlet uses a separately animated curved tube + droplets rather than a static cylinder.
 
+## Drilling game-feel pass — 2026-09-29
+
+The drilling interaction is no longer allowed to read like filling out a progress form.
+
+Player-facing drilling feedback now comes primarily from the 3D world:
+- the large filled progress disc is removed as the visual metaphor;
+- the bore mark starts tiny and physically grows at the contact point;
+- multiple fine radial crack branches appear progressively from drilling progress and local stress;
+- the drill visibly vibrates while cutting and jolts on breakthrough;
+- small glass/debris particles emit from the contact point;
+- breakthrough briefly pulses the opening/ring;
+- the HUD progress bar is hidden during normal play and remains only as internal state for tuning.
+
+The water shader pass is also made visually legible through moving analytical normals affecting Fresnel/reflection/transmission, while keeping geometric displacement small.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -279,4 +294,7 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
 15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
 16. [x] Tone water waves down and move contained-water motion to layered directional shader waves with analytical normals.
-17. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.
+17. [x] Replace form-like drilling progress with bore growth, fine crack branches, tool vibration, contact debris and breakthrough pulse.
+18. [x] Hide the normal-play HUD drilling progress bar; world feedback is primary.
+19. [x] Make directional-wave shader normals visibly affect reflection/transmission without increasing wave height.
+20. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

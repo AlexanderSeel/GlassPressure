@@ -36,6 +36,7 @@ import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { TargetLeakVisual } from "./scene/TargetLeakVisual";
 import { InletStreamVisual } from "./scene/InletStreamVisual";
+import { DrillContactVisual } from "./scene/DrillContactVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
@@ -77,6 +78,7 @@ export class Game {
   private drillRoot!: TransformNode;
   private overflowVisuals!: FlowVisuals;
   private inletVisual!: InletStreamVisual;
+  private drillContactVisual!: DrillContactVisual;
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
   private waterMaterial!: PBRMaterial;
@@ -351,6 +353,10 @@ export class Game {
       water,
       Math.max(10, Math.floor(this.quality.flowParticlePoolSize * 0.65)),
     );
+    this.drillContactVisual = new DrillContactVisual(
+      this.scene,
+      Math.max(12, Math.floor(this.quality.flowParticlePoolSize * 0.75)),
+    );
 
 
     this.vessel = {
@@ -503,7 +509,8 @@ export class Game {
       this.simulateActiveTarget(this.activeTarget, alignment, activePressurePa, dt);
     }
 
-    this.updateTargetVisuals();
+    this.updateTargetVisuals(dt);
+    this.updateDrillContactVisual(dt);
     this.applyBuoyancy();
     this.nestedVessel.applyHydrodynamics(
       this.waterSurfaceForBody(this.nestedVessel.position),
@@ -587,10 +594,10 @@ export class Game {
           );
         }
         target.holeCreated = true;
+        target.notifyBreakthrough();
         this.targetLocked = false;
-        this.activeTarget = null;
+        this.activeTarget = target;
         this.drill.notifyBreakthrough();
-        target.marker.scaling.setAll(0.55);
       }
     }
 
@@ -953,6 +960,7 @@ export class Game {
     for (const visual of this.leakVisuals.values()) visual.reset();
     this.overflowVisuals.reset();
     this.inletVisual.reset();
+    this.drillContactVisual.reset();
     this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(
@@ -1002,10 +1010,29 @@ export class Game {
     );
   }
 
-  private updateTargetVisuals(): void {
+  private updateTargetVisuals(dt: number): void {
     for (const target of this.targets) {
-      target.updateVisual(this.failed);
+      target.setDrillingActive(
+        target === this.activeTarget && this.drill.isDrilling,
+      );
+      target.updateVisual(this.failed, dt);
     }
+  }
+
+  private updateDrillContactVisual(dt: number): void {
+    const target = this.activeTarget;
+    const drilling =
+      target !== null &&
+      !target.holeCreated &&
+      this.drill.isDrilling;
+
+    this.drillContactVisual.update(
+      dt,
+      drilling,
+      target?.marker.getAbsolutePosition() ?? null,
+      target ? target.surfaceNormal(this.camera.position) : null,
+      target ? Math.max(target.progress01, target.stress01) : 0,
+    );
   }
 
   private failGlass(target: DrillTargetRuntime): void {
@@ -1037,6 +1064,17 @@ export class Game {
       direction.scale(Math.max(0.35, distance - standOff)),
     );
     this.drillRoot.lookAt(targetPosition);
+
+    if (this.drill.isDrilling) {
+      const t = this.runtime.elapsedSeconds;
+      const vibration = 0.012 + (1 - this.drillSteadiness01) * 0.018;
+      this.drillRoot.position.x += Math.sin(t * 92) * vibration;
+      this.drillRoot.position.y += Math.cos(t * 107) * vibration * 0.65;
+      this.drillRoot.rotation.z += Math.sin(t * 128) * 0.008;
+    } else if (this.drill.state === "breakthrough") {
+      const t = this.runtime.elapsedSeconds;
+      this.drillRoot.position.z -= 0.035 + Math.sin(t * 70) * 0.012;
+    }
   }
 
   private updateHud(): void {

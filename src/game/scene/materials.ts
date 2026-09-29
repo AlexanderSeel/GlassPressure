@@ -184,22 +184,36 @@ export function createWaterSurfaceMaterial(
         waveShade
       );
 
-      vec3 reflectionTint = vec3(0.23, 0.34, 0.38);
+      vec3 reflected = reflect(-viewDir, normal);
+      float skyBlend = clamp(reflected.y * 0.5 + 0.5, 0.0, 1.0);
+      vec3 horizon = vec3(0.08, 0.16, 0.19);
+      vec3 sky = vec3(0.32, 0.46, 0.5);
+      vec3 reflectionTint = mix(horizon, sky, skyBlend);
+
+      float movingBand =
+        sin(
+          vWorldPosition.x * 2.2 +
+          vWorldPosition.z * 1.7 +
+          reflected.x * 5.0 +
+          reflected.z * 4.0
+        ) * 0.5 + 0.5;
+
       vec3 color = mix(
         transmitted,
         reflectionTint,
-        fresnel * 0.72
+        fresnel * 0.82
       );
-      color += vec3(specular * (0.2 + agitation * 0.08));
+      color += reflectionTint * movingBand * (0.025 + agitation * 0.025);
+      color += vec3(specular * (0.24 + agitation * 0.1));
 
       float alpha =
-        0.16 +
-        fresnel * 0.3 +
-        specular * 0.05;
+        0.2 +
+        fresnel * 0.34 +
+        specular * 0.06;
 
       gl_FragColor = vec4(
         color,
-        clamp(alpha, 0.14, 0.48)
+        clamp(alpha, 0.18, 0.56)
       );
     }
   `;
@@ -237,6 +251,6 @@ export function createWaterSurfaceMaterial(
   material.setVector2("impactPosition", Vector2.Zero());
   material.setVector2("flowDirection", Vector2.Zero());
   material.setVector3("cameraPosition", Vector3.Zero());
-  material.setColor3("baseColor", new Color3(0.02, 0.22, 0.31));
+  material.setColor3("baseColor", new Color3(0.025, 0.27, 0.36));
   return material;
 }
