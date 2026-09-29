@@ -82,11 +82,11 @@ export const FIRST_LEVEL: LevelDefinition = {
     requireSecondaryEscaped: true,
   },
   nestedAssembly: true,
-  primaryBodyInitialPosition: [0.58, 2.35, 0.05],
+  primaryBodyInitialPosition: [0.58, 2.62, 0.05],
   nestedVessel: {
     enabled: true,
     radiusScene: 0.48,
-    initialPosition: [-0.58, 2.34, -0.05],
+    initialPosition: [-0.58, 2.52, -0.05],
     baseMassKg: 0.13,
     fluidCapacityM3: 0.00048,
     initialFluidVolumeM3: 0.00012,

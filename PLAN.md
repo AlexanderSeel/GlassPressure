@@ -228,6 +228,22 @@ Stabilization rules:
 - water is deformed in one place only (surface mesh), not again in the shader;
 - shader highlights/ripples are reduced to avoid the glossy/noisy "blue terrain" look.
 
+## Shader water reference pass — 2026-09-29
+
+Reviewed the supplied Shadertoy references and adapted the useful ideas rather than copying full scene shaders:
+
+- `MdXyzX`: use layered directional waves with one reusable height/derivative function. This is the primary basis for contained-cup water because it is cheap, scalable and supports analytical surface normals.
+- `Xl2XRW` ("Where the River Goes"): use as a reflection/refraction quality reference only; its raymarched scene approach is too expensive and too global for many nested moving vessels.
+- `lsXGzH` ("Spout"): use as a stream-shape reference for inlet/drilled jets; do not raymarch every water body.
+
+Implementation direction:
+- contained surfaces use a few low-amplitude directional waves in the vertex shader;
+- the same wave derivatives produce the surface normal, avoiding unrelated fake normal noise;
+- one localized damped radial ripple is driven by inlet/body impact position;
+- CPU no longer deforms the water mesh each frame;
+- authoritative physics water remains a flat fill plane; shader displacement is a small visual skin only;
+- inlet uses a separately animated curved tube + droplets rather than a static cylinder.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -262,5 +278,5 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 13. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
 14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
 15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
-16. [x] Tone water waves down to subtle geometry + restrained shader response.
+16. [x] Tone water waves down and move contained-water motion to layered directional shader waves with analytical normals.
 17. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

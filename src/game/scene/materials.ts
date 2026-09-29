@@ -3,6 +3,7 @@ import {
   PBRMaterial,
   Scene,
   ShaderMaterial,
+  Vector2,
   Vector3,
 } from "@babylonjs/core";
 
@@ -58,59 +59,148 @@ export function createWaterSurfaceMaterial(
     uniform mat4 worldViewProjection;
     uniform float time;
     uniform float agitation;
+    uniform float impactStrength;
+    uniform float waveAmplitude;
+    uniform vec2 impactPosition;
+    uniform vec2 flowDirection;
 
     varying vec3 vWorldPosition;
-    varying float vWave;
+    varying vec3 vWorldNormal;
+    varying float vWaveHeight;
+
+    vec2 waveTerm(
+      vec2 p,
+      vec2 direction,
+      float frequency,
+      float phase
+    ) {
+      float x = dot(direction, p) * frequency + phase;
+      float s = sin(x);
+      float shape = exp(s - 1.0);
+      float derivative = shape * cos(x) * frequency;
+      return vec2(shape - 0.38, derivative);
+    }
+
+    void addWave(
+      inout float height,
+      inout vec2 gradient,
+      vec2 p,
+      vec2 direction,
+      float frequency,
+      float speed,
+      float amplitude
+    ) {
+      vec2 dir = normalize(direction);
+      vec2 term = waveTerm(p, dir, frequency, time * speed);
+      height += term.x * amplitude;
+      gradient += dir * term.y * amplitude;
+    }
 
     void main(void) {
-      vec4 worldPosition = world * vec4(position, 1.0);
+      vec2 p = position.xy;
+      float motion = 0.35 + agitation * 0.65;
+      float height = 0.0;
+      vec2 gradient = vec2(0.0);
+
+      addWave(height, gradient, p, vec2(1.0, 0.18), 2.15, 0.62, 0.44);
+      addWave(height, gradient, p, vec2(-0.36, 1.0), 2.85, 0.48, 0.28);
+      addWave(height, gradient, p, vec2(0.72, 0.68), 3.65, 0.78, 0.16);
+      addWave(height, gradient, p, vec2(-0.88, 0.42), 4.45, 0.93, 0.08);
+
+      vec2 flowDir =
+        length(flowDirection) > 0.001
+          ? normalize(flowDirection)
+          : vec2(1.0, 0.0);
+      addWave(height, gradient, p, flowDir, 1.65, 0.42, agitation * 0.14);
+
+      vec2 delta = p - impactPosition;
+      float distanceToImpact = length(delta);
+      if (distanceToImpact > 0.0001) {
+        float ripplePhase = distanceToImpact * 7.5 - time * 4.0;
+        float falloff = exp(-distanceToImpact * 1.45);
+        float rippleAmplitude = impactStrength * 0.16 * falloff;
+        height += sin(ripplePhase) * rippleAmplitude;
+
+        vec2 radial = delta / distanceToImpact;
+        float derivative =
+          (
+            cos(ripplePhase) * 7.5 -
+            sin(ripplePhase) * 1.45
+          ) *
+          rippleAmplitude;
+        gradient += radial * derivative;
+      }
+
+      float verticalScale = waveAmplitude * motion;
+      vec3 displaced = position;
+      displaced.z += height * verticalScale;
+
+      vec3 localNormal = normalize(
+        vec3(
+          -gradient.x * verticalScale,
+          -gradient.y * verticalScale,
+          1.0
+        )
+      );
+
+      vec4 worldPosition = world * vec4(displaced, 1.0);
       vWorldPosition = worldPosition.xyz;
-      vWave = 0.0;
-      gl_Position = worldViewProjection * vec4(position, 1.0);
+      vWorldNormal = normalize(mat3(world) * localNormal);
+      vWaveHeight = height;
+
+      gl_Position = worldViewProjection * vec4(displaced, 1.0);
     }
   `;
 
   const fragmentSource = `
     precision highp float;
 
-    uniform float time;
-    uniform float agitation;
     uniform vec3 cameraPosition;
     uniform vec3 baseColor;
+    uniform float agitation;
 
     varying vec3 vWorldPosition;
-    varying float vWave;
+    varying vec3 vWorldNormal;
+    varying float vWaveHeight;
 
     void main(void) {
-      float a = 0.12 + agitation * 0.22;
-
-      float gx =
-        cos(vWorldPosition.x * 4.0 + time * 0.9) * 0.045 +
-        sin((vWorldPosition.x + vWorldPosition.z) * 2.6 - time * 0.7) * 0.025;
-      float gz =
-        sin(vWorldPosition.z * 4.4 - time * 0.8) * 0.04 +
-        cos((vWorldPosition.x - vWorldPosition.z) * 2.8 + time * 0.75) * 0.02;
-
-      vec3 normal = normalize(vec3(-gx * a, 1.0, -gz * a));
+      vec3 normal = normalize(vWorldNormal);
       vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-      float fresnel = pow(1.0 - clamp(abs(dot(normal, viewDir)), 0.0, 1.0), 3.2);
 
-      vec3 lightDir = normalize(vec3(-0.45, 0.85, -0.25));
+      float viewDot = clamp(dot(normal, viewDir), 0.0, 1.0);
+      float fresnel = 0.02 + 0.98 * pow(1.0 - viewDot, 5.0);
+
+      vec3 lightDir = normalize(vec3(-0.42, 0.88, -0.22));
       vec3 halfDir = normalize(lightDir + viewDir);
-      float specular = pow(max(dot(normal, halfDir), 0.0), 120.0);
+      float specular = pow(
+        max(dot(normal, halfDir), 0.0),
+        mix(150.0, 95.0, agitation)
+      );
 
-      float micro =
-        sin(vWorldPosition.x * 15.0 + time * 4.4) *
-        cos(vWorldPosition.z * 13.0 - time * 3.7) * 0.5 + 0.5;
+      float waveShade = clamp(vWaveHeight * 0.18 + 0.5, 0.0, 1.0);
+      vec3 transmitted = mix(
+        baseColor * 0.72,
+        baseColor * 1.08,
+        waveShade
+      );
 
-      vec3 deep = baseColor * 0.52;
-      vec3 shallow = baseColor * 1.22 + vec3(0.02, 0.08, 0.10);
-      vec3 color = mix(deep, shallow, 0.42 + fresnel * 0.48);
-      color += vec3(specular * (0.12 + agitation * 0.08));
-      color += vec3(0.005, 0.012, 0.016) * micro * a;
+      vec3 reflectionTint = vec3(0.23, 0.34, 0.38);
+      vec3 color = mix(
+        transmitted,
+        reflectionTint,
+        fresnel * 0.72
+      );
+      color += vec3(specular * (0.2 + agitation * 0.08));
 
-      float alpha = 0.2 + fresnel * 0.24 + specular * 0.08;
-      gl_FragColor = vec4(color, clamp(alpha, 0.18, 0.5));
+      float alpha =
+        0.16 +
+        fresnel * 0.3 +
+        specular * 0.05;
+
+      gl_FragColor = vec4(
+        color,
+        clamp(alpha, 0.14, 0.48)
+      );
     }
   `;
 
@@ -128,6 +218,10 @@ export function createWaterSurfaceMaterial(
         "worldViewProjection",
         "time",
         "agitation",
+        "impactStrength",
+        "waveAmplitude",
+        "impactPosition",
+        "flowDirection",
         "cameraPosition",
         "baseColor",
       ],
@@ -138,7 +232,11 @@ export function createWaterSurfaceMaterial(
   material.backFaceCulling = false;
   material.setFloat("time", 0);
   material.setFloat("agitation", 0);
+  material.setFloat("impactStrength", 0);
+  material.setFloat("waveAmplitude", 0.03);
+  material.setVector2("impactPosition", Vector2.Zero());
+  material.setVector2("flowDirection", Vector2.Zero());
   material.setVector3("cameraPosition", Vector3.Zero());
-  material.setColor3("baseColor", new Color3(0.018, 0.24, 0.34));
+  material.setColor3("baseColor", new Color3(0.02, 0.22, 0.31));
   return material;
 }

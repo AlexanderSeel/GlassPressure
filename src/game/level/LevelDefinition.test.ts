@@ -52,7 +52,8 @@ describe("LevelDefinition", () => {
 
   it("makes level five a rotating collar challenge", () => {
     expect(FIFTH_LEVEL.sourceRing).toBeDefined();
-    expect(FIFTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(1);
+    expect(FIFTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(0.4);
+    expect(FIFTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeLessThan(1);
     expect(FIFTH_LEVEL.goal.minInnerXScene).toBeLessThan(0);
     expect(FIFTH_LEVEL.goal.maxInnerXScene).toBeGreaterThan(0);
   });
@@ -61,7 +62,8 @@ describe("LevelDefinition", () => {
     expect(SIXTH_LEVEL.nestedVessel?.enabled).toBe(true);
     expect(SIXTH_LEVEL.sourceRing).toBeDefined();
     expect(SIXTH_LEVEL.goal.requireSecondaryHole).toBe(true);
-    expect(SIXTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(2);
+    expect(SIXTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeGreaterThan(0.4);
+    expect(SIXTH_LEVEL.hostMotion?.rotationAmplitudeRadians).toBeLessThan(1);
     expect(SIXTH_LEVEL.targets.some(target => target.effect === "pressure-relief")).toBe(true);
     expect(SIXTH_LEVEL.targets.some(target => target.effect === "nested-drain")).toBe(true);
   });
