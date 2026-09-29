@@ -300,6 +300,22 @@ A first restrained caustics approximation now projects moving interference bands
 
 Later polish can make the caustics react more directly to the active water-normal field and shadowing, but the current version establishes the rendering hook without affecting gameplay.
 
+## Splash / onboarding pass — 2026-09-29
+
+Water-entry feedback now includes actual pooled particles in addition to the ring cue:
+- vessels crossing the surface emit short-lived splash droplets;
+- downward entries also seed a few underwater bubbles that rise and disappear at the surface;
+- particles are bounded and reused, so this does not grow scene objects over time.
+
+Level 1 now has a compact top-center coach that advances through the intended core loop:
+1. let the parent cup fill;
+2. drill the cyan parent transfer port;
+3. watch the inner cup rise;
+4. drill the purple inner release port;
+5. let buoyancy/flow wash the inner cup over the rim.
+
+The coach is hidden on later levels and is intentionally concise so the 3D interaction remains primary.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -331,7 +347,7 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 10. [x] Unify rendered and physical water-surface heights through tested shared water-level functions.
 11. [x] Replace static inlet cylinder with animated curved stream + moving impact point.
 12. [x] Recalibrate Level 1 floating-body masses so vessels track the waterline.
-13. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
+13. [x] Add a short Level 1 onboarding coach explaining: fill → parent drill → rise → inner drill → escape.
 14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
 15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
 16. [x] Tone water waves down and move contained-water motion to layered directional shader waves with analytical normals.
@@ -341,7 +357,7 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 20. [x] Add level-specific six-face cubemap skybox switching and use it for glass/water reflections.
 21. [x] Document production skybox asset contract and CC0 replacement candidates.
 22. [x] Add waterline/meniscus and velocity-stretched local wake cues around partially submerged vessels.
-23. [x] Add surface-crossing splash-ring pulses; bubble particle bursts remain a later polish item.
+23. [x] Add surface-crossing splash-ring pulses plus pooled splash droplets and underwater bubbles.
 24. [x] Add first lightweight animated caustics projection whose intensity follows authoritative water fill.
 25. Replace development cubemaps with optimized local production skybox faces.
 26. Only after Level 1 visually/mechanically matches the original concept, resume broader tool/environment polish.

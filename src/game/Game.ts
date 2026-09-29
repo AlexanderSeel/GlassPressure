@@ -43,6 +43,7 @@ import { CausticsVisual } from "./scene/CausticsVisual";
 import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
+import { OnboardingController } from "./ui/OnboardingController";
 import { resolveQualityPreset } from "./quality/QualitySettings";
 import { readQualityPreference, SettingsController } from "./ui/SettingsController";
 
@@ -61,6 +62,7 @@ export class Game {
   private readonly fixedStep = new FixedStepRunner(1 / 60, 5);
   private readonly drill = new DrillController();
   private readonly hud = new HudController();
+  private readonly onboarding = new OnboardingController();
   private readonly qualityPreference = readQualityPreference();
   private readonly quality = resolveQualityPreset(
     this.qualityPreference,
@@ -1195,6 +1197,15 @@ export class Game {
       nestedHeightScene: this.nestedVessel.heightScene,
       nestedFill01: this.nestedVessel.fill01,
       qualityTier: this.quality.tier,
+    });
+
+    this.onboarding.render({
+      levelId: this.level.id,
+      sourceFill01: this.fluid.getFillRatio(this.vessel),
+      primaryDrainOpen: this.hasPrimaryDrain,
+      nestedDrainOpen: this.hasNestedDrain,
+      nestedHeightScene: this.nestedVessel.heightScene,
+      nestedEscaped: this.nestedVesselEscaped,
     });
   }
 
