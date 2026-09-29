@@ -1094,12 +1094,18 @@ export class Game {
   }
 
   private get receiverWaterSurfaceY(): number {
-    return RECEIVER_BASE_Y + this.receiverFill * RECEIVER_WATER_HEIGHT_SCENE;
+    return receiverSurfaceWorldY(
+      RECEIVER_BASE_Y,
+      this.receiverFill,
+    );
   }
 
   private get sourceWaterSurfaceY(): number {
     const upperFill = this.fluid.getFillRatio(this.vessel);
-    return this.targetHost.getAbsolutePosition().y - 0.88 + upperFill * 1.72;
+    return (
+      this.targetHost.getAbsolutePosition().y +
+      sourceSurfaceLocalY(upperFill)
+    );
   }
 
   private waterSurfaceForBody(position: Vector3): number {
