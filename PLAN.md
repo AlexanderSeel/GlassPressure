@@ -141,7 +141,7 @@ Planned tools:
 - [x] first pooled flow droplets/bubbles driven by simulated outflow
 - [x] first automatic Low/Medium/High render quality presets
 - [x] level-driven six-face cubemap environment system
-- [x] use active cubemap for PBR glass and custom water reflections
+- [x] use active cubemap for PBR glass plus custom water reflection/refraction
 - [ ] replace development cubemaps with local licensed/CC0 production assets
 - [x] first lightweight caustics approximation
 - [ ] Botanical Atrium production asset pass
@@ -341,6 +341,14 @@ Implemented:
 - the third core is intentionally non-drillable in this pass so nesting stability can be validated independently from another objective/failure path.
 
 This is the first level state where "nested glass" is physically real rather than a visual overlap around a spherical proxy.
+
+## Environment refraction pass — 2026-09-29
+
+The custom water shader now samples the active cubemap twice:
+- reflection direction from the analytical water normal;
+- refracted direction using water IOR ~1.333.
+
+The refracted environment sample is mixed with water absorption based on viewing angle and agitation. This makes moving shader normals affect both reflected and transmitted environment detail while keeping the surface displacement small and physics-independent.
 
 ## Current state — 2026-09-28
 Development is performed directly on `main`.

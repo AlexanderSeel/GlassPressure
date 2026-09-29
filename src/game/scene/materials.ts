@@ -179,9 +179,32 @@ export function createWaterSurfaceMaterial(
       );
 
       float waveShade = clamp(vWaveHeight * 0.18 + 0.5, 0.0, 1.0);
+
+      vec3 refracted = refract(
+        -viewDir,
+        normal,
+        1.0 / 1.333
+      );
+      vec3 refractionTint = textureCube(
+        environmentMap,
+        refracted
+      ).rgb;
+
+      float grazing = 1.0 - viewDot;
+      float absorption = clamp(
+        0.2 + grazing * 0.52 + agitation * 0.08,
+        0.0,
+        0.82
+      );
+
       vec3 transmitted = mix(
-        baseColor * 0.72,
-        baseColor * 1.08,
+        refractionTint,
+        baseColor,
+        absorption
+      );
+      transmitted = mix(
+        transmitted * 0.88,
+        transmitted * 1.08,
         waveShade
       );
 
@@ -207,15 +230,16 @@ export function createWaterSurfaceMaterial(
       vec3 color = mix(
         transmitted,
         reflectionTint,
-        fresnel * 0.82
+        clamp(fresnel * 0.9, 0.0, 0.94)
       );
       color += reflectionTint * movingBand * (0.025 + agitation * 0.025);
       color += vec3(specular * (0.24 + agitation * 0.1));
 
       float alpha =
-        0.2 +
-        fresnel * 0.34 +
-        specular * 0.06;
+        0.16 +
+        fresnel * 0.38 +
+        absorption * 0.08 +
+        specular * 0.05;
 
       gl_FragColor = vec4(
         color,
