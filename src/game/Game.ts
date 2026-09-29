@@ -44,6 +44,7 @@ import { DrillTargetRuntime } from "./targets/DrillTargetRuntime";
 import { DrillController } from "./tools/DrillController";
 import { HudController } from "./ui/HudController";
 import { OnboardingController } from "./ui/OnboardingController";
+import { GameAudio } from "./audio/GameAudio";
 import { resolveQualityPreset } from "./quality/QualitySettings";
 import { readQualityPreference, SettingsController } from "./ui/SettingsController";
 
@@ -63,6 +64,7 @@ export class Game {
   private readonly drill = new DrillController();
   private readonly hud = new HudController();
   private readonly onboarding = new OnboardingController();
+  private readonly audio = new GameAudio();
   private readonly qualityPreference = readQualityPreference();
   private readonly quality = resolveQualityPreset(
     this.qualityPreference,
@@ -456,6 +458,7 @@ export class Game {
   private bindInput(): void {
     this.canvas.addEventListener("pointerdown", event => {
       if (event.button !== 0 || this.failed || this.runtime.phase !== "playing") return;
+      void this.audio.unlock();
 
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
       const target = this.targets.find(runtime =>
@@ -512,6 +515,12 @@ export class Game {
       !this.failed;
 
     this.drill.step(dt, this.targetLocked && targetAvailable);
+
+    this.audio.updateDrill(
+      this.drill.state,
+      this.activeTarget?.stress01 ?? 0,
+      this.activeTarget?.progress01 ?? 0,
+    );
 
     const result = this.fluid.step(this.vessel, dt);
     const nestedOutflowM3 = this.nestedVessel.stepFluid(dt);
@@ -630,6 +639,7 @@ export class Game {
         }
         target.holeCreated = true;
         target.notifyBreakthrough();
+        this.audio.breakthrough();
         this.targetLocked = false;
         this.activeTarget = target;
         this.drill.notifyBreakthrough();
@@ -1012,6 +1022,7 @@ export class Game {
     this.applyLevelEnvironment();
     this.fixedStep.reset();
     this.drill.reset();
+    this.audio.reset();
     this.vessel.capacityM3 = this.level.sourceCapacityM3;
     this.vessel.volumeM3 = this.level.initialSourceVolumeM3;
     this.vessel.heightMeters = this.level.sourceHeightMeters;
@@ -1120,6 +1131,7 @@ export class Game {
 
   private failGlass(target: DrillTargetRuntime): void {
     this.failed = true;
+    this.audio.glassFailure();
     this.runtime.fail();
     this.targetLocked = false;
     this.activeTarget = target;

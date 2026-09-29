@@ -114,7 +114,7 @@ Planned tools:
 - [x] angle gate before contact/drilling
 - [x] first authored local break region with bounded physics fragments
 - [ ] protected-object failure rules
-- [ ] drill audio/haptics hooks
+- [x] procedural drill audio + optional haptic hooks
 
 ### M3 — Fluid routing
 - [ ] compartment graph
@@ -316,6 +316,18 @@ Level 1 now has a compact top-center coach that advances through the intended co
 
 The coach is hidden on later levels and is intentionally concise so the 3D interaction remains primary.
 
+## Audio / haptics pass — 2026-09-29
+
+The drill now has a first procedural audio/tactile layer with no external sound assets:
+- user interaction unlocks a Web Audio context;
+- drill motor gain/pitch responds to approach/contact/drilling load;
+- stress/progress influence motor load and filtered cutting noise;
+- breakthrough gets a short transient plus optional vibration;
+- catastrophic glass failure gets a distinct lower transient/noise burst plus optional vibration;
+- contact noise is rate-limited so the fixed-step loop does not create unbounded audio nodes.
+
+This is a hook layer, not final sound design. Later production audio can replace the procedural sounds while keeping the same state-driven API.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -348,7 +360,7 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 11. [x] Replace static inlet cylinder with animated curved stream + moving impact point.
 12. [x] Recalibrate Level 1 floating-body masses so vessels track the waterline.
 13. [x] Add a short Level 1 onboarding coach explaining: fill → parent drill → rise → inner drill → escape.
-14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
+14. [x] Add procedural audio/haptic feedback for drill contact, stress, breakthrough and glass failure; vessel-collision audio remains a later polish item.
 15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
 16. [x] Tone water waves down and move contained-water motion to layered directional shader waves with analytical normals.
 17. [x] Replace form-like drilling progress with bore growth, fine crack branches, tool vibration, contact debris and breakthrough pulse.
