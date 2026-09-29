@@ -328,6 +328,20 @@ The drill now has a first procedural audio/tactile layer with no external sound 
 
 This is a hook layer, not final sound design. Later production audio can replace the procedural sounds while keeping the same state-driven API.
 
+## Compound nesting pass — 2026-09-29
+
+The primary inner cup no longer uses a solid hidden sphere as its collision shape.
+
+Implemented:
+- the primary inner cup now uses a Havok/Babylon `PhysicsShapeContainer`;
+- its collision body is built from an open bottom + segmented side walls, leaving the top physically open;
+- the visible cup and physics body move as one rigid body;
+- a third, smaller glass core flask now starts physically inside that hollow cup;
+- the core has its own Havok rigid body, buoyancy, drag, receiver-current force and waterline/splash cues;
+- the third core is intentionally non-drillable in this pass so nesting stability can be validated independently from another objective/failure path.
+
+This is the first level state where "nested glass" is physically real rather than a visual overlap around a spherical proxy.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -351,8 +365,8 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 2. [x] Add parent-cup Havok floor/wall collision so nested bodies can rise inside it and clear the rim.
 3. [x] Use parent-cup water height for buoyancy while a body is inside the cup, then surrounding-chamber water after escape.
 4. [x] Make Level 1 require drilling the inner nested body and physically escaping the parent cup.
-5. Add a third nested glass object with a different visual shape so Level 1 demonstrates a true multi-layer nest, not only two bodies.
-6. [x] Replace the first spherical nested visuals with open glass cup/bell forms while retaining stable spherical collision proxies.
+5. [x] Add a third nested glass core with a different flask/bulb shape so Level 1 demonstrates a true multi-layer nest.
+6. [x] Replace spherical nested visuals with open glass cup/bell forms; the primary inner cup now also uses a hollow compound collision proxy.
 7. [x] Add visual water transfer from parent cup overflow at the actual rim locations; drilled-hole streams already originate from the target position.
 8. [x] Replace capped blue fill meshes with open-sided depth volume + dedicated animated liquid shader surface.
 9. [x] Add persistent slosh, inlet ripple propagation and body-driven local water disturbances.

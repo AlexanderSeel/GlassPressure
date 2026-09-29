@@ -6,8 +6,6 @@ import {
   HavokPlugin,
   Mesh,
   MeshBuilder,
-  PhysicsAggregate,
-  PhysicsShapeType,
   PBRMaterial,
   Scene,
   ShaderMaterial,
@@ -21,6 +19,7 @@ import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyan
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
+import { CoreNestedRuntime } from "./simulation/CoreNestedRuntime";
 import {
   receiverSurfaceWorldY,
   receiverWaterHeightScene,
@@ -33,6 +32,7 @@ import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
 import { createEnvironmentScene, type EnvironmentSceneController } from "./scene/EnvironmentScene";
 import { createBasinCollision } from "./scene/BasinCollision";
 import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision";
+import { createDynamicOpenCupBody, type DynamicOpenCupBody } from "./scene/DynamicOpenCupBody";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
 import { TargetLeakVisual } from "./scene/TargetLeakVisual";
@@ -80,7 +80,7 @@ export class Game {
   private receiverWaterMesh!: Mesh;
   private upperWaterSurface!: WaterSurfaceVisual;
   private receiverWaterSurface!: WaterSurfaceVisual;
-  private dynamicBody!: PhysicsAggregate;
+  private dynamicBody!: DynamicOpenCupBody;
   private targetHost!: Mesh;
   private sourceRing!: Mesh;
   private drillRoot!: TransformNode;
@@ -89,9 +89,11 @@ export class Game {
   private drillContactVisual!: DrillContactVisual;
   private primaryWaterContact!: WaterContactVisual;
   private nestedWaterContact!: WaterContactVisual;
+  private coreWaterContact!: WaterContactVisual;
   private causticsVisual!: CausticsVisual;
   private breakVisuals!: GlassBreakVisuals;
   private nestedVessel!: NestedVesselRuntime;
+  private coreNested!: CoreNestedRuntime;
   private waterMaterial!: PBRMaterial;
   private readonly waterSurfaceMaterials: ShaderMaterial[] = [];
   private readonly leakVisuals = new Map<string, TargetLeakVisual>();
@@ -273,16 +275,13 @@ export class Game {
       0.022,
     );
 
-    const inner = MeshBuilder.CreateSphere(
-      "inner-vessel-collider",
-      { diameter: INNER_RADIUS_SCENE * 2, segments: 24 },
+    const inner = new TransformNode(
+      "inner-vessel-root",
       this.scene,
     );
     inner.position = new Vector3(
       ...(this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0]),
     );
-    inner.visibility = 0;
-    inner.isPickable = false;
 
     const innerCup = MeshBuilder.CreateCylinder(
       "inner-glass-cup",
@@ -312,11 +311,17 @@ export class Game {
     innerCupRim.material = glass;
     innerCupRim.isPickable = false;
 
-    this.dynamicBody = new PhysicsAggregate(
-      inner,
-      PhysicsShapeType.SPHERE,
-      { mass: 0.43, restitution: 0.08, friction: 0.45 },
+    this.dynamicBody = createDynamicOpenCupBody(
       this.scene,
+      inner,
+      {
+        innerRadius: 0.5,
+        height: 1.0,
+        wallThickness: 0.075,
+        bottomThickness: 0.1,
+        wallSegments: 12,
+        massKg: 0.43,
+      },
     );
 
     this.nestedVessel = new NestedVesselRuntime(
@@ -325,6 +330,15 @@ export class Game {
       water,
     );
     this.nestedVessel.configure(this.level.nestedVessel);
+
+    this.coreNested = new CoreNestedRuntime(
+      this.scene,
+      glass,
+    );
+    this.coreNested.configure(
+      this.level.nestedAssembly === true,
+      this.coreInitialPosition,
+    );
 
     const innerFluid = MeshBuilder.CreateCylinder(
       "inner-fluid",
@@ -385,6 +399,11 @@ export class Game {
       this.scene,
       "nested-water-contact",
       0.48,
+    );
+    this.coreWaterContact = new WaterContactVisual(
+      this.scene,
+      "core-water-contact",
+      this.coreNested.radiusScene,
     );
     this.causticsVisual = new CausticsVisual(this.scene);
 
@@ -551,6 +570,11 @@ export class Game {
     this.nestedVessel.applyHydrodynamics(
       this.waterSurfaceForBody(this.nestedVessel.position),
     );
+    if (this.coreNested.enabled) {
+      this.coreNested.applyHydrodynamics(
+        this.waterSurfaceForBody(this.coreNested.position),
+      );
+    }
     this.applyNestedWashout();
     this.applyReceiverCurrent(dt, transferredM3);
     this.updateOpenHoleFlows(result.holeOutflowsM3, dt);
@@ -737,6 +761,9 @@ export class Game {
 
     if (this.nestedVessel.enabled) {
       this.nestedVessel.applyCurrentForce(current.scale(-0.72));
+    }
+    if (this.coreNested.enabled) {
+      this.coreNested.applyCurrentForce(current.scale(0.28));
     }
   }
 
@@ -1030,6 +1057,10 @@ export class Game {
     this.vessel.holes.length = 0;
     this.receiverVolumeM3 = this.level.initialReceiverVolumeM3;
     this.nestedVessel.configure(this.level.nestedVessel);
+    this.coreNested.configure(
+      this.level.nestedAssembly === true,
+      this.coreInitialPosition,
+    );
     this.diameterIndex = 1;
     this.targetLocked = false;
     this.activeTarget = null;
@@ -1054,6 +1085,7 @@ export class Game {
     this.drillContactVisual.reset();
     this.primaryWaterContact.reset();
     this.nestedWaterContact.reset();
+    this.coreWaterContact.reset();
     this.causticsVisual.reset();
     this.breakVisuals.clear();
 
@@ -1289,6 +1321,12 @@ export class Game {
     const position = this.nestedVessel.position;
     const radial = Math.hypot(position.x - host.x, position.z - host.z);
     return radial > cup.innerRadius + 0.28 || position.y < cup.bottomY - 0.35;
+  }
+
+  private get coreInitialPosition(): Vector3 {
+    const [x, y, z] =
+      this.level.primaryBodyInitialPosition ?? [0.45, 1.75, 0];
+    return new Vector3(x, y - 0.26, z);
   }
 
   private get pressureReliefOpen(): boolean {
