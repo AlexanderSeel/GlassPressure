@@ -482,6 +482,7 @@ export class Game {
 
     const result = this.fluid.step(this.vessel, dt);
     const nestedOutflowM3 = this.nestedVessel.stepFluid(dt);
+    this.updateInletVisual(dt, result.inletM3);
     this.lastPressurePa = result.pressurePa;
     this.lastNestedOutflowM3 = nestedOutflowM3;
     const transferredM3 =
@@ -750,6 +751,19 @@ export class Game {
     }
   }
 
+  private updateInletVisual(
+    dt: number,
+    inletM3: number,
+  ): void {
+    this.inletImpactWorld = this.inletVisual.update(
+      dt,
+      this.runtime.elapsedSeconds,
+      this.targetHost.getAbsolutePosition(),
+      this.sourceWaterSurfaceY,
+      inletM3,
+    );
+  }
+
   private updateOverflowVisuals(
     overflowM3: number,
     dt: number,
@@ -833,8 +847,12 @@ export class Game {
       velocityX: primaryInsideSource ? bodyVelocity.x : 0,
       velocityZ: primaryInsideSource ? bodyVelocity.z : 0,
       inlet01: Math.min(1, this.vessel.inletM3PerSecond * 3600),
-      disturbanceX: sourceDisturbancePosition.x - hostPosition.x,
-      disturbanceZ: sourceDisturbancePosition.z - hostPosition.z,
+      disturbanceX:
+        (this.inletImpactWorld.x - hostPosition.x) * 0.8 +
+        (sourceDisturbancePosition.x - hostPosition.x) * 0.2,
+      disturbanceZ:
+        (this.inletImpactWorld.z - hostPosition.z) * 0.8 +
+        (sourceDisturbancePosition.z - hostPosition.z) * 0.2,
       disturbance01:
         primaryInsideSource || nestedInsideSource
           ? Math.min(1, sourceDisturbanceVelocity.length() * 0.75)
@@ -934,6 +952,7 @@ export class Game {
 
     for (const visual of this.leakVisuals.values()) visual.reset();
     this.overflowVisuals.reset();
+    this.inletVisual.reset();
     this.breakVisuals.clear();
 
     this.dynamicBody.transformNode.position.copyFromFloats(
