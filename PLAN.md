@@ -350,6 +350,22 @@ The custom water shader now samples the active cubemap twice:
 
 The refracted environment sample is mixed with water absorption based on viewing angle and agitation. This makes moving shader normals affect both reflected and transmitted environment detail while keeping the surface displacement small and physics-independent.
 
+## Parent vessel physics correction — 2026-09-29
+
+The large parent/source vessel is no longer a visually static prop in Level 1-style nested levels.
+
+Changes:
+- the parent cup now uses the same open compound Havok body approach as the inner cup;
+- on non-scripted nested levels it runs as a dynamic rigid body;
+- a soft physical restoring force keeps it near the playable region while still allowing translation/tilt from gravity, surrounding-water buoyancy, inlet force and nested-body collisions;
+- surrounding receiver water contributes buoyancy to the parent cup;
+- linear/angular drag keeps motion readable instead of chaotic;
+- scripted moving/rotating levels switch the cup to animated motion so authored host motion and Havok do not fight each other;
+- the old invisible static cup collision shell has been removed to avoid ghost self-collision;
+- the main inner cup now uses cylindrical/open-cup buoyancy instead of a sphere approximation, with buoyancy applied below center to generate restoring torque when tilted.
+
+Water shader amplitude is also raised from the overly-flat stabilization values to a moderate level so the reflection/refraction normal field visibly reads as moving water without returning to terrain-like waves.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -384,7 +400,7 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 13. [x] Add a short Level 1 onboarding coach explaining: fill → parent drill → rise → inner drill → escape.
 14. [x] Add procedural audio/haptic feedback for drill contact, stress, breakthrough and glass failure; vessel-collision audio remains a later polish item.
 15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
-16. [x] Tone water waves down and move contained-water motion to layered directional shader waves with analytical normals.
+16. [x] Use layered directional shader waves with analytical normals; current amplitude is tuned to a moderate visible range rather than the earlier flat/terrain extremes.
 17. [x] Replace form-like drilling progress with bore growth, fine crack branches, tool vibration, contact debris and breakthrough pulse.
 18. [x] Hide the normal-play HUD drilling progress bar; world feedback is primary.
 19. [x] Make directional-wave shader normals visibly affect reflection/transmission without increasing wave height.

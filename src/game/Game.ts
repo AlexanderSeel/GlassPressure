@@ -7,6 +7,7 @@ import {
   Mesh,
   MeshBuilder,
   PBRMaterial,
+  PhysicsMotionType,
   Scene,
   ShaderMaterial,
   TransformNode,
@@ -31,7 +32,6 @@ import { createGlassMaterial, createWaterMaterial, createWaterSurfaceMaterial } 
 import { WaterSurfaceVisual } from "./scene/WaterSurfaceVisual";
 import { createEnvironmentScene, type EnvironmentSceneController } from "./scene/EnvironmentScene";
 import { createBasinCollision } from "./scene/BasinCollision";
-import { createOpenCupCollision, type CupCollision } from "./scene/CupCollision";
 import { createDynamicOpenCupBody, type DynamicOpenCupBody } from "./scene/DynamicOpenCupBody";
 import { FlowVisuals } from "./scene/FlowVisuals";
 import { GlassBreakVisuals } from "./scene/GlassBreakVisuals";
@@ -52,7 +52,6 @@ const DIAMETERS = [0.006, 0.01, 0.016] as const;
 const RECEIVER_BASE_Y = 0.2;
 const INNER_RADIUS_SCENE = 0.575;
 const SCENE_TO_METERS = 0.1;
-const INNER_RADIUS_METERS = INNER_RADIUS_SCENE * SCENE_TO_METERS;
 
 export class Game {
   private readonly engine: Engine;
@@ -248,7 +247,7 @@ export class Game {
       upperSurfaceMaterial,
       upper,
       64,
-      0.018,
+      0.045,
     );
 
     this.receiverWaterMesh = MeshBuilder.CreateCylinder(
@@ -272,7 +271,7 @@ export class Game {
       receiverSurfaceMaterial,
       null,
       72,
-      0.022,
+      0.065,
     );
 
     const inner = new TransformNode(
@@ -1037,6 +1036,11 @@ export class Game {
 
   private updateHostMotion(dt: number): void {
     const offset = this.runtime.advance(dt);
+
+    if (this.parentCupUsesDynamicPhysics) {
+      return;
+    }
+
     this.targetHost.position.copyFromFloats(
       this.targetHostBasePosition.x + offset.x,
       this.targetHostBasePosition.y + offset.y,
@@ -1099,22 +1103,15 @@ export class Game {
   }
 
   private configureSourceCupCollision(): void {
-    if (this.sourceCupCollision) {
-      for (const aggregate of this.sourceCupCollision.aggregates) aggregate.dispose();
-      for (const mesh of this.sourceCupCollision.meshes) mesh.dispose();
-      this.sourceCupCollision = null;
-    }
+    const motionType = this.parentCupUsesDynamicPhysics
+      ? PhysicsMotionType.DYNAMIC
+      : PhysicsMotionType.ANIMATED;
 
-    if (!this.level.nestedAssembly) return;
-
-    this.sourceCupCollision = createOpenCupCollision(
-      this.scene,
-      "parent-cup",
-      this.targetHostBasePosition,
-      1.74,
-      1.76,
-      16,
-    );
+    this.sourceCupBody.body.setMotionType(motionType);
+    this.targetHost.position.copyFrom(this.targetHostBasePosition);
+    this.targetHost.rotation.copyFromFloats(0, 0, 0);
+    this.sourceCupBody.body.setLinearVelocity(Vector3.Zero());
+    this.sourceCupBody.body.setAngularVelocity(Vector3.Zero());
   }
 
   private configureSourceRing(): void {
@@ -1300,27 +1297,36 @@ export class Game {
   }
 
   private waterSurfaceForBody(position: Vector3): number {
-    const cup = this.sourceCupCollision;
-    if (!cup) return this.receiverWaterSurfaceY;
+    if (!this.level.nestedAssembly) return this.receiverWaterSurfaceY;
 
     const host = this.targetHost.getAbsolutePosition();
     const radial = Math.hypot(position.x - host.x, position.z - host.z);
+    const bottomY = host.y - 0.86;
+    const rimY = host.y + 0.86;
     const stillInsideCup =
-      radial < cup.innerRadius - 0.08 &&
-      position.y < cup.rimY + 0.62 &&
-      position.y > cup.bottomY - 0.3;
+      radial < 1.62 &&
+      position.y < rimY + 0.62 &&
+      position.y > bottomY - 0.3;
 
-    return stillInsideCup ? this.sourceWaterSurfaceY : this.receiverWaterSurfaceY;
+    return stillInsideCup
+      ? this.sourceWaterSurfaceY
+      : this.receiverWaterSurfaceY;
   }
 
   private get nestedVesselEscaped(): boolean {
-    const cup = this.sourceCupCollision;
-    if (!cup || !this.nestedVessel.enabled) return false;
+    if (!this.level.nestedAssembly || !this.nestedVessel.enabled) {
+      return false;
+    }
 
     const host = this.targetHost.getAbsolutePosition();
     const position = this.nestedVessel.position;
     const radial = Math.hypot(position.x - host.x, position.z - host.z);
-    return radial > cup.innerRadius + 0.28 || position.y < cup.bottomY - 0.35;
+    const bottomY = host.y - 0.86;
+    return radial > 2.0 || position.y < bottomY - 0.35;
+  }
+
+  private get parentCupUsesDynamicPhysics(): boolean {
+    return this.level.nestedAssembly === true && !this.level.hostMotion;
   }
 
   private get coreInitialPosition(): Vector3 {

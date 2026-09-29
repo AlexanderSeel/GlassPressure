@@ -25,3 +25,20 @@ export function buoyancyForceNewtons(
     Math.max(0, submergedVolumeM3) *
     Math.max(0, gravityMps2);
 }
+
+
+export function submergedCylinderVolume(
+  radiusMeters: number,
+  heightMeters: number,
+  immersionDepthMeters: number,
+): number {
+  const r = Math.max(0, radiusMeters);
+  const h = Math.max(0, heightMeters);
+  if (r === 0 || h === 0) return 0;
+
+  const submergedHeight = Math.max(
+    0,
+    Math.min(h, immersionDepthMeters),
+  );
+  return Math.PI * r * r * submergedHeight;
+}
