@@ -216,7 +216,7 @@ export class Game {
     this.upperWaterMesh.position.y = -0.25;
     this.upperWaterMesh.material = water;
     this.upperWaterMesh.isPickable = false;
-    this.upperWaterMesh.visibility = 0.24;
+    this.upperWaterMesh.visibility = 0.08;
 
     this.upperWaterSurface = new WaterSurfaceVisual(
       this.scene,
@@ -225,7 +225,7 @@ export class Game {
       upperSurfaceMaterial,
       upper,
       64,
-      0.035,
+      0.018,
     );
 
     this.receiverWaterMesh = MeshBuilder.CreateCylinder(
@@ -240,7 +240,7 @@ export class Game {
     );
     this.receiverWaterMesh.material = water;
     this.receiverWaterMesh.isPickable = false;
-    this.receiverWaterMesh.visibility = 0.22;
+    this.receiverWaterMesh.visibility = 0.08;
 
     this.receiverWaterSurface = new WaterSurfaceVisual(
       this.scene,
@@ -249,7 +249,7 @@ export class Game {
       receiverSurfaceMaterial,
       null,
       72,
-      0.055,
+      0.022,
     );
 
     const inner = MeshBuilder.CreateSphere(
@@ -346,14 +346,12 @@ export class Game {
       this.quality.glassFragmentBudget,
     );
 
-    const inlet = MeshBuilder.CreateCylinder(
-      "inlet-stream",
-      { diameter: 0.18, height: 3.2, tessellation: 20 },
+    this.inletVisual = new InletStreamVisual(
       this.scene,
+      water,
+      Math.max(10, Math.floor(this.quality.flowParticlePoolSize * 0.65)),
     );
-    inlet.position.y = 5.55;
-    inlet.material = water;
-    inlet.isPickable = false;
+
 
     this.vessel = {
       id: "upper",
