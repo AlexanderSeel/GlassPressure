@@ -67,7 +67,7 @@ export const FIRST_LEVEL: LevelDefinition = {
   name: "Nested Lift",
   objective:
     "Let the parent cup fill, drill its transfer port, then catch the rising inner glass body and drill it before the flow washes it over the rim.",
-  initialSourceVolumeM3: 0.006,
+  initialSourceVolumeM3: 0.0006,
   sourceCapacityM3: 0.012,
   sourceHeightMeters: 0.72,
   sourceInletM3PerSecond: 0.00022,
@@ -152,9 +152,9 @@ export const SECOND_LEVEL: LevelDefinition = {
     minInnerHeightScene: 2.05,
   },
   hostMotion: {
-    lateralAmplitudeScene: 0.42,
-    verticalAmplitudeScene: 0.09,
-    frequencyHz: 0.19,
+    lateralAmplitudeScene: 0.24,
+    verticalAmplitudeScene: 0.04,
+    frequencyHz: 0.09,
     phaseRadians: 0.7,
   },
   nestedVessel: {
@@ -349,10 +349,10 @@ export const FIFTH_LEVEL: LevelDefinition = {
     maxInnerXScene: 0.34,
   },
   hostMotion: {
-    lateralAmplitudeScene: 0.12,
-    verticalAmplitudeScene: 0.04,
-    rotationAmplitudeRadians: Math.PI,
-    frequencyHz: 0.16,
+    lateralAmplitudeScene: 0.08,
+    verticalAmplitudeScene: 0.025,
+    rotationAmplitudeRadians: 0.72,
+    frequencyHz: 0.065,
     phaseRadians: 0.35,
   },
   sourceRing: {
@@ -443,10 +443,10 @@ export const SIXTH_LEVEL: LevelDefinition = {
     minSecondaryHeightScene: 2.76,
   },
   hostMotion: {
-    lateralAmplitudeScene: 0.28,
-    verticalAmplitudeScene: 0.08,
-    rotationAmplitudeRadians: Math.PI * 0.82,
-    frequencyHz: 0.21,
+    lateralAmplitudeScene: 0.16,
+    verticalAmplitudeScene: 0.04,
+    rotationAmplitudeRadians: 0.68,
+    frequencyHz: 0.075,
     phaseRadians: 1.05,
   },
   sourceRing: {

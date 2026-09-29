@@ -118,7 +118,7 @@ export class WaterSurfaceVisual {
 
     const positions = [...this.basePositions];
     const baseAmplitude =
-      this.waveAmplitude * (0.16 + agitation * 0.48 + inlet * 0.2);
+      this.waveAmplitude * (0.035 + agitation * 0.08 + inlet * 0.045);
     const time = state.timeSeconds;
 
     for (let i = 0; i < positions.length; i += 3) {
@@ -132,9 +132,9 @@ export class WaterSurfaceVisual {
 
       let height =
         (
-          Math.sin(x * 3.1 + time * 2.25) * 0.28 +
-          Math.cos(z * 3.7 - time * 1.82) * 0.22 +
-          Math.sin((x + z) * 2.15 + time * 1.43) * 0.14
+          Math.sin(x * 2.4 + time * 0.9) * 0.22 +
+          Math.cos(z * 2.7 - time * 0.72) * 0.18 +
+          Math.sin((x + z) * 1.8 + time * 0.56) * 0.1
         ) *
         baseAmplitude *
         edgeDamping;
@@ -144,11 +144,11 @@ export class WaterSurfaceVisual {
         const iz = state.disturbanceZ ?? 0;
         const impactDistance = Math.hypot(x - ix, z - iz);
         height +=
-          Math.sin(impactDistance * 12.0 - time * 9.2) *
-          Math.exp(-impactDistance * 0.72) *
+          Math.sin(impactDistance * 7.0 - time * 4.2) *
+          Math.exp(-impactDistance * 1.0) *
           this.waveAmplitude *
           inlet *
-          0.9;
+          0.18;
       }
 
       for (const ripple of this.disturbances) {
@@ -156,11 +156,12 @@ export class WaterSurfaceVisual {
         const ageDamping = Math.exp(-ripple.age * 1.18);
         const spatialDamping = Math.exp(-distance * 0.48);
         height +=
-          Math.sin(distance * 12.4 - ripple.age * 11.2) *
+          Math.sin(distance * 7.8 - ripple.age * 5.2) *
           ageDamping *
           spatialDamping *
           this.waveAmplitude *
-          ripple.strength;
+          ripple.strength *
+          0.16;
       }
 
       positions[i + 2] = height;
@@ -184,18 +185,18 @@ export class WaterSurfaceVisual {
     dt: number,
   ): void {
     const targetX = clamp(
-      -velocityZ * (0.03 + agitation * 0.06),
-      -0.12,
-      0.12,
+      -velocityZ * (0.012 + agitation * 0.018),
+      -0.035,
+      0.035,
     );
     const targetZ = clamp(
-      velocityX * (0.03 + agitation * 0.06),
-      -0.12,
-      0.12,
+      velocityX * (0.012 + agitation * 0.018),
+      -0.035,
+      0.035,
     );
 
-    const stiffness = 17;
-    const damping = 4.6;
+    const stiffness = 9;
+    const damping = 6.5;
 
     this.tiltVelocityX += (targetX - this.tiltX) * stiffness * dt;
     this.tiltVelocityZ += (targetZ - this.tiltZ) * stiffness * dt;

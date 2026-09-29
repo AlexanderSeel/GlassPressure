@@ -107,6 +107,7 @@ Planned tools:
 - [x] targets attached to vessel transforms
 - [x] steadiness/alignment metrics
 - [x] clear drilling progress in-world + HUD
+- [x] monotonic drilling progress; release never moves progress backwards
 - [x] local target stress model
 - [x] crack rendering
 - [x] geometry-derived surface normal via ray intersection with target vessel
@@ -214,6 +215,19 @@ Corrections:
 - the water surface is now a dense radial mesh, not a simple Babylon disc, so inlet/body waves physically deform interior vertices;
 - inlet ripple origin follows the moving impact point.
 
+## Stabilization pass — 2026-09-29
+
+Recent fluid/interaction changes became too aggressive and made the prototype harder to evaluate. The current priority is predictable gameplay, not visual complexity.
+
+Stabilization rules:
+- drilling progress is monotonic: releasing the trigger never subtracts progress;
+- moving targets may reduce drilling efficiency, but they do not force the drill state to retract merely because alignment briefly changes;
+- Level 1 starts with genuinely low source water so nested bodies rest before buoyancy becomes strong enough to lift them;
+- moving/rotating levels use slower, smaller host motion so a target stays drillable long enough to make visible progress;
+- water geometry deformation is intentionally subtle;
+- water is deformed in one place only (surface mesh), not again in the shader;
+- shader highlights/ripples are reduced to avoid the glossy/noisy "blue terrain" look.
+
 ## Current state — 2026-09-28
 Development is performed directly on `main`.
 
@@ -247,4 +261,6 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 12. [x] Recalibrate Level 1 floating-body masses so vessels track the waterline.
 13. Add a short Level 1 onboarding overlay explaining: fill → rise → drill → escape.
 14. Add audio/haptic feedback for contact, drill breakthrough, glass stress and vessel collisions.
-15. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.
+15. [x] Stabilize rotating/moving levels to slower, drillable target motion.
+16. [x] Tone water waves down to subtle geometry + restrained shader response.
+17. Only after Level 1 visually/mechanically matches the original concept, resume environment/caustics/tool polish.

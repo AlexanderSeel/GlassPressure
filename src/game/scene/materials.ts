@@ -63,18 +63,10 @@ export function createWaterSurfaceMaterial(
     varying float vWave;
 
     void main(void) {
-      vec3 displaced = position;
-      float a = 0.25 + agitation * 0.75;
-      float waveA = sin(position.x * 5.3 + time * 2.2);
-      float waveB = cos(position.y * 6.1 - time * 1.75);
-      float waveC = sin((position.x + position.y) * 3.4 + time * 2.8);
-      float wave = (waveA * 0.46 + waveB * 0.34 + waveC * 0.20) * a;
-
-      displaced.z += wave * 0.018;
-      vec4 worldPosition = world * vec4(displaced, 1.0);
+      vec4 worldPosition = world * vec4(position, 1.0);
       vWorldPosition = worldPosition.xyz;
-      vWave = wave;
-      gl_Position = worldViewProjection * vec4(displaced, 1.0);
+      vWave = 0.0;
+      gl_Position = worldViewProjection * vec4(position, 1.0);
     }
   `;
 
@@ -90,14 +82,14 @@ export function createWaterSurfaceMaterial(
     varying float vWave;
 
     void main(void) {
-      float a = 0.25 + agitation * 0.75;
+      float a = 0.12 + agitation * 0.22;
 
       float gx =
-        cos(vWorldPosition.x * 7.0 + time * 2.4) * 0.16 +
-        sin((vWorldPosition.x + vWorldPosition.z) * 4.0 - time * 1.7) * 0.09;
+        cos(vWorldPosition.x * 4.0 + time * 0.9) * 0.045 +
+        sin((vWorldPosition.x + vWorldPosition.z) * 2.6 - time * 0.7) * 0.025;
       float gz =
-        sin(vWorldPosition.z * 8.0 - time * 2.0) * 0.15 +
-        cos((vWorldPosition.x - vWorldPosition.z) * 4.7 + time * 1.9) * 0.08;
+        sin(vWorldPosition.z * 4.4 - time * 0.8) * 0.04 +
+        cos((vWorldPosition.x - vWorldPosition.z) * 2.8 + time * 0.75) * 0.02;
 
       vec3 normal = normalize(vec3(-gx * a, 1.0, -gz * a));
       vec3 viewDir = normalize(cameraPosition - vWorldPosition);
@@ -105,7 +97,7 @@ export function createWaterSurfaceMaterial(
 
       vec3 lightDir = normalize(vec3(-0.45, 0.85, -0.25));
       vec3 halfDir = normalize(lightDir + viewDir);
-      float specular = pow(max(dot(normal, halfDir), 0.0), 88.0);
+      float specular = pow(max(dot(normal, halfDir), 0.0), 120.0);
 
       float micro =
         sin(vWorldPosition.x * 15.0 + time * 4.4) *
@@ -114,11 +106,11 @@ export function createWaterSurfaceMaterial(
       vec3 deep = baseColor * 0.52;
       vec3 shallow = baseColor * 1.22 + vec3(0.02, 0.08, 0.10);
       vec3 color = mix(deep, shallow, 0.42 + fresnel * 0.48);
-      color += vec3(specular * (0.34 + agitation * 0.38));
-      color += vec3(0.015, 0.035, 0.045) * micro * a;
+      color += vec3(specular * (0.12 + agitation * 0.08));
+      color += vec3(0.005, 0.012, 0.016) * micro * a;
 
-      float alpha = 0.28 + fresnel * 0.34 + specular * 0.18;
-      gl_FragColor = vec4(color, clamp(alpha, 0.24, 0.72));
+      float alpha = 0.2 + fresnel * 0.24 + specular * 0.08;
+      gl_FragColor = vec4(color, clamp(alpha, 0.18, 0.5));
     }
   `;
 

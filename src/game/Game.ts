@@ -453,9 +453,6 @@ export class Game {
     window.addEventListener("pointerup", () => {
       this.targetLocked = false;
       this.drill.release();
-      if (this.activeTarget) {
-        this.activeTarget.progress01 = Math.max(0, this.activeTarget.progress01 - 0.04);
-      }
     });
 
     window.addEventListener("keydown", event => {
@@ -478,8 +475,7 @@ export class Game {
       this.activeTarget !== null &&
       !this.activeTarget.holeCreated &&
       this.activeTarget.isHeightAccessible &&
-      !this.failed &&
-      alignment >= 0.28;
+      !this.failed;
 
     this.drill.step(dt, this.targetLocked && targetAvailable);
 
@@ -565,7 +561,8 @@ export class Game {
     );
 
     if (this.drill.isDrilling) {
-      const efficiency = drillingEfficiency(alignment, steadiness);
+      const forgivingAlignment = Math.max(0.42, alignment);
+      const efficiency = drillingEfficiency(forgivingAlignment, steadiness);
       target.progress01 +=
         dt *
         0.42 *
