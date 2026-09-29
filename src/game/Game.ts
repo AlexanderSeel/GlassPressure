@@ -16,7 +16,7 @@ import {
 import { LEVELS, type LevelDefinition } from "./level/LevelDefinition";
 import { LevelRuntime } from "./level/LevelRuntime";
 import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
-import { buoyancyForceNewtons, submergedSphereVolume } from "./simulation/Buoyancy";
+import { buoyancyForceNewtons, submergedCylinderVolume } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
@@ -96,7 +96,7 @@ export class Game {
   private waterMaterial!: PBRMaterial;
   private readonly waterSurfaceMaterials: ShaderMaterial[] = [];
   private readonly leakVisuals = new Map<string, TargetLeakVisual>();
-  private sourceCupCollision: CupCollision | null = null;
+  private sourceCupBody!: DynamicOpenCupBody;
 
   private readonly targets: DrillTargetRuntime[] = [];
   private activeTarget: DrillTargetRuntime | null = null;
@@ -195,6 +195,18 @@ export class Game {
     upper.material = glass;
     upper.isPickable = false;
     this.targetHost = upper;
+    this.sourceCupBody = createDynamicOpenCupBody(
+      this.scene,
+      upper,
+      {
+        innerRadius: 1.72,
+        height: 1.72,
+        wallThickness: 0.11,
+        bottomThickness: 0.12,
+        wallSegments: 18,
+        massKg: 1.4,
+      },
+    );
 
     const parentRim = MeshBuilder.CreateTorus(
       "parent-cup-rim",
@@ -565,6 +577,7 @@ export class Game {
 
     this.updateTargetVisuals(dt);
     this.updateDrillContactVisual(dt);
+    this.applyParentCupPhysics(dt);
     this.applyBuoyancy();
     this.nestedVessel.applyHydrodynamics(
       this.waterSurfaceForBody(this.nestedVessel.position),
@@ -676,23 +689,83 @@ export class Game {
 
   private applyBuoyancy(): void {
     const bodyPosition = this.dynamicBody.transformNode.getAbsolutePosition();
-    const sphereBottomY = bodyPosition.y - INNER_RADIUS_SCENE;
     const waterSurfaceY = this.waterSurfaceForBody(bodyPosition);
-    const immersionScene = Math.max(0, waterSurfaceY - sphereBottomY);
-    const immersionMeters = immersionScene * SCENE_TO_METERS;
-
-    const submergedVolume = submergedSphereVolume(INNER_RADIUS_METERS, immersionMeters);
+    const cupBottomY = bodyPosition.y - 0.54;
+    const immersionScene = Math.max(0, waterSurfaceY - cupBottomY);
+    const submergedVolume = submergedCylinderVolume(
+      0.052,
+      0.108,
+      immersionScene * SCENE_TO_METERS,
+    );
     const buoyancy = buoyancyForceNewtons(1000, submergedVolume);
 
     const velocity = this.dynamicBody.body.getLinearVelocity();
     const drag = new Vector3(
-      -velocity.x * 0.32,
-      -velocity.y * 0.58,
-      -velocity.z * 0.32,
+      -velocity.x * 0.42,
+      -velocity.y * 0.7,
+      -velocity.z * 0.42,
     );
 
-    const upward = new Vector3(0, Math.min(8, buoyancy), 0);
-    this.dynamicBody.body.applyForce(upward.add(drag), bodyPosition);
+    const upward = new Vector3(0, Math.min(10, buoyancy), 0);
+    const downAxis = this.dynamicBody.transformNode
+      .getDirection(new Vector3(0, -1, 0))
+      .normalize();
+    const centerOfBuoyancy = bodyPosition.add(downAxis.scale(0.28));
+    this.dynamicBody.body.applyForce(
+      upward.add(drag),
+      centerOfBuoyancy,
+    );
+  }
+
+  private applyParentCupPhysics(dt: number): void {
+    if (!this.parentCupUsesDynamicPhysics) return;
+
+    const position = this.targetHost.getAbsolutePosition();
+    const velocity = this.sourceCupBody.body.getLinearVelocity();
+    const angularVelocity = this.sourceCupBody.body.getAngularVelocity();
+
+    const displacement = position.subtract(this.targetHostBasePosition);
+    const spring = new Vector3(
+      -displacement.x * 8.5,
+      -displacement.y * 34,
+      -displacement.z * 8.5,
+    );
+    const drag = new Vector3(
+      -velocity.x * 2.1,
+      -velocity.y * 2.7,
+      -velocity.z * 2.1,
+    );
+
+    const bottomY = position.y - 0.86;
+    const immersionScene = Math.max(
+      0,
+      this.receiverWaterSurfaceY - bottomY,
+    );
+    const displacedVolume = submergedCylinderVolume(
+      0.17,
+      0.172,
+      immersionScene * SCENE_TO_METERS,
+    );
+    const buoyancy = buoyancyForceNewtons(1000, displacedVolume);
+
+    const fill = this.fluid.getFillRatio(this.vessel);
+    const inletPush = new Vector3(
+      Math.sin(this.runtime.elapsedSeconds * 1.4) * 0.22,
+      -0.18 - fill * 0.16,
+      Math.cos(this.runtime.elapsedSeconds * 1.17) * 0.18,
+    );
+
+    this.sourceCupBody.body.applyForce(
+      spring
+        .add(drag)
+        .add(new Vector3(0, Math.min(26, buoyancy), 0))
+        .add(inletPush),
+      position,
+    );
+
+    this.sourceCupBody.body.setAngularVelocity(
+      angularVelocity.scale(Math.exp(-dt * 0.42)),
+    );
   }
 
   private applyNestedWashout(): void {
