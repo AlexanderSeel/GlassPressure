@@ -68,7 +68,6 @@ export function createWaterSurfaceMaterial(
     varying vec3 vWorldNormal;
     varying float vWaveHeight;
     varying float vWaveSlope;
-    varying float vWaveSlope;
 
     vec2 waveTerm(
       vec2 p,
@@ -166,6 +165,7 @@ export function createWaterSurfaceMaterial(
     varying vec3 vWorldPosition;
     varying vec3 vWorldNormal;
     varying float vWaveHeight;
+    varying float vWaveSlope;
 
     void main(void) {
       vec3 normal = normalize(vWorldNormal);
