@@ -20,6 +20,7 @@ import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/Tar
 import {
   buoyancyForceNewtons,
   effectiveContainedLiquidWeightNewtons,
+  submergedCylinderFraction,
   submergedCylinderVolume,
 } from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
@@ -116,6 +117,7 @@ export class Game {
   private pointerMotion = 0;
   private failed = false;
   private inletImpactWorld = Vector3.Zero();
+  private inletDirectionWorld = new Vector3(0, -1, 0);
 
   public constructor(private readonly canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, {
@@ -706,10 +708,15 @@ export class Game {
     const buoyancy = buoyancyForceNewtons(1000, submergedVolume);
 
     const velocity = this.dynamicBody.body.getLinearVelocity();
+    const immersion01 = submergedCylinderFraction(
+      0.108,
+      immersionScene * SCENE_TO_METERS,
+    );
+    const dragScale = 0.1 + immersion01 * 0.9;
     const drag = new Vector3(
-      -velocity.x * 0.42,
-      -velocity.y * 0.7,
-      -velocity.z * 0.42,
+      -velocity.x * 0.42 * dragScale,
+      -velocity.y * 0.7 * dragScale,
+      -velocity.z * 0.42 * dragScale,
     );
 
     const upward = new Vector3(0, Math.min(10, buoyancy), 0);
@@ -736,43 +743,59 @@ export class Game {
       -displacement.y * 34,
       -displacement.z * 8.5,
     );
-    const drag = new Vector3(
-      -velocity.x * 2.1,
-      -velocity.y * 2.7,
-      -velocity.z * 2.1,
-    );
-
     const bottomY = position.y - 0.86;
     const immersionScene = Math.max(
       0,
       this.receiverWaterSurfaceY - bottomY,
     );
+    const immersionMeters = immersionScene * SCENE_TO_METERS;
     const displacedVolume = submergedCylinderVolume(
       0.17,
       0.172,
-      immersionScene * SCENE_TO_METERS,
+      immersionMeters,
     );
     const buoyancy = buoyancyForceNewtons(1000, displacedVolume);
+    const immersion01 = submergedCylinderFraction(
+      0.172,
+      immersionMeters,
+    );
 
-    const fill = this.fluid.getFillRatio(this.vessel);
+    const dragScale = 0.12 + immersion01 * 0.88;
+    const drag = new Vector3(
+      -velocity.x * 2.1 * dragScale,
+      -velocity.y * 2.7 * dragScale,
+      -velocity.z * 2.1 * dragScale,
+    );
+
     const containedWaterLoadN = effectiveContainedLiquidWeightNewtons(
       this.vessel.volumeM3,
       this.vessel.densityKgM3,
       0.16,
     );
-    const inletPush = new Vector3(
-      Math.sin(this.runtime.elapsedSeconds * 1.4) * 0.22,
-      -0.18 - fill * 0.16,
-      Math.cos(this.runtime.elapsedSeconds * 1.17) * 0.18,
-    );
 
     this.sourceCupBody.body.applyForce(
       spring
         .add(drag)
-        .add(new Vector3(0, Math.min(26, buoyancy) - containedWaterLoadN, 0))
-        .add(inletPush),
+        .add(
+          new Vector3(
+            0,
+            Math.min(26, buoyancy) - containedWaterLoadN,
+            0,
+          ),
+        ),
       position,
     );
+
+    const inletForceMagnitude = Math.min(
+      1.2,
+      this.vessel.inletM3PerSecond * 3000,
+    );
+    if (inletForceMagnitude > 0.001) {
+      this.sourceCupBody.body.applyForce(
+        this.inletDirectionWorld.scale(inletForceMagnitude),
+        this.inletImpactWorld,
+      );
+    }
 
     this.sourceCupBody.body.setAngularVelocity(
       angularVelocity.scale(Math.exp(-dt * 0.42)),
@@ -923,13 +946,15 @@ export class Game {
     dt: number,
     inletM3: number,
   ): void {
-    this.inletImpactWorld = this.inletVisual.update(
+    const inletState = this.inletVisual.update(
       dt,
       this.runtime.elapsedSeconds,
       this.targetHost.getAbsolutePosition(),
       this.sourceWaterSurfaceY,
       inletM3,
     );
+    this.inletImpactWorld.copyFrom(inletState.impact);
+    this.inletDirectionWorld.copyFrom(inletState.direction);
   }
 
   private updateOverflowVisuals(

@@ -55,3 +55,29 @@ export function effectiveContainedLiquidWeightNewtons(
   const coupling = Math.min(1, Math.max(0, coupling01));
   return volume * density * Math.max(0, gravityMps2) * coupling;
 }
+
+
+export function submergedCylinderFraction(
+  heightMeters: number,
+  immersionDepthMeters: number,
+): number {
+  const height = Math.max(0, heightMeters);
+  if (height <= 0) return 0;
+  return Math.min(1, Math.max(0, immersionDepthMeters / height));
+}
+
+export function submergedSphereFraction(
+  radiusMeters: number,
+  immersionDepthMeters: number,
+): number {
+  const fullVolume = sphereVolume(radiusMeters);
+  if (fullVolume <= 0) return 0;
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      submergedSphereVolume(radiusMeters, immersionDepthMeters) /
+        fullVolume,
+    ),
+  );
+}

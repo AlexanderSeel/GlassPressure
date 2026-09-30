@@ -9,6 +9,7 @@ import {
 } from "@babylonjs/core";
 import {
   buoyancyForceNewtons,
+  submergedSphereFraction,
   submergedSphereVolume,
 } from "./Buoyancy";
 
@@ -132,12 +133,17 @@ export class CoreNestedRuntime {
       1000,
       displacedM3,
     );
+    const immersion01 = submergedSphereFraction(
+      radiusMeters,
+      immersionMeters,
+    );
 
     const velocity = this.body.body.getLinearVelocity();
+    const dragScale = 0.08 + immersion01 * 0.92;
     const drag = new Vector3(
-      -velocity.x * 0.12,
-      -velocity.y * 0.22,
-      -velocity.z * 0.12,
+      -velocity.x * 0.12 * dragScale,
+      -velocity.y * 0.22 * dragScale,
+      -velocity.z * 0.12 * dragScale,
     );
 
     this.body.body.applyForce(

@@ -435,3 +435,17 @@ Follow-up tuning after the cup-local coupling fix:
 - no new fake normal/noise architecture was introduced and the existing reflection/refraction path remains intact.
 
 The 0.16 parent liquid-load coupling is intentionally a gameplay coupling rather than full 1:1 liquid mass. Full source capacity represents about 12 kg of water while the current spring-supported prototype parent body is only 1.4 kg; applying all of that directly would overwhelm the current Level 1 support model before the surrounding receiver can provide compensating buoyancy.
+
+
+## Hydrodynamic force-quality pass — 2026-09-30
+
+The next Level 1 tuning pass removes two remaining prototype-style force shortcuts:
+
+- primary, nested and core vessel drag now scales with actual submersion instead of applying full water drag while a body is mostly in air;
+- parent-cup surrounding-water drag uses the same immersion-based scaling;
+- the synthetic sinusoidal parent inlet push has been removed;
+- the animated inlet now exposes its real stream direction and impact point;
+- inlet momentum is applied at that impact point, so the stream can create a small physically readable torque on the dynamic parent cup;
+- pure submersion-fraction helpers and regression tests were added to keep the drag transition bounded from 0..1.
+
+This keeps gravity/Havok authoritative while improving the causal chain: visible inlet -> impact force -> parent motion, and water contact -> hydrodynamic damping.

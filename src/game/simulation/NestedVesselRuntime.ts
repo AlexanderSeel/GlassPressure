@@ -9,7 +9,11 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import type { NestedVesselDefinition } from "../level/LevelDefinition";
-import { buoyancyForceNewtons, submergedSphereVolume } from "./Buoyancy";
+import {
+  buoyancyForceNewtons,
+  submergedSphereFraction,
+  submergedSphereVolume,
+} from "./Buoyancy";
 import { FluidSystem, type FluidCompartment } from "./FluidSystem";
 
 const SCENE_TO_METERS = 0.1;
@@ -165,12 +169,17 @@ export class NestedVesselRuntime {
       Math.max(0, waterSurfaceY - sphereBottomY) * SCENE_TO_METERS;
     const displacedM3 = submergedSphereVolume(radiusMeters, immersionMeters);
     const buoyancyN = buoyancyForceNewtons(1000, displacedM3);
+    const immersion01 = submergedSphereFraction(
+      radiusMeters,
+      immersionMeters,
+    );
 
     const velocity = this.body.body.getLinearVelocity();
+    const dragScale = 0.12 + immersion01 * 0.88;
     const drag = new Vector3(
-      -velocity.x * 0.26,
-      -velocity.y * 0.48,
-      -velocity.z * 0.26,
+      -velocity.x * 0.26 * dragScale,
+      -velocity.y * 0.48 * dragScale,
+      -velocity.z * 0.26 * dragScale,
     );
 
     const containedWaterWeightN = this.compartment.volumeM3 * 1000 * 9.81;

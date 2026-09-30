@@ -5,6 +5,11 @@ import {
   Scene,
   Vector3,
 } from "@babylonjs/core";
+
+export type InletStreamState = {
+  impact: Vector3;
+  direction: Vector3;
+};
 import { FlowVisuals } from "./FlowVisuals";
 
 export class InletStreamVisual {
@@ -41,7 +46,7 @@ export class InletStreamVisual {
     targetCenter: Vector3,
     surfaceY: number,
     inletM3: number,
-  ): Vector3 {
+  ): InletStreamState {
     const source = new Vector3(
       targetCenter.x + Math.sin(timeSeconds * 0.32) * 0.12,
       targetCenter.y + 3.0,
@@ -95,7 +100,10 @@ export class InletStreamVisual {
       direction,
     );
 
-    return impact;
+    return {
+      impact,
+      direction,
+    };
   }
 
   public reset(): void {
