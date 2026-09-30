@@ -27,6 +27,10 @@ import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
 import { isPointInsideOpenCupLocal, hasEscapedOpenCupLocal } from "./simulation/OpenCupRegion";
+import {
+  pickDominantWaterDisturbance,
+  type WaterDisturbanceCandidate,
+} from "./simulation/WaterDisturbance";
 import { CoreNestedRuntime } from "./simulation/CoreNestedRuntime";
 import {
   receiverSurfaceWorldY,
@@ -1013,25 +1017,71 @@ export class Game {
     const bodyVelocity = this.dynamicBody.body.getLinearVelocity();
     const nestedPosition = this.nestedVessel.position;
     const nestedVelocity = this.nestedVessel.linearVelocity;
+    const corePosition = this.coreNested.position;
+    const coreVelocity = this.coreNested.linearVelocity;
     const transferRate = transferredM3 / Math.max(dt, 1 / 120);
     const transferAgitation = Math.min(1, transferRate * 2600);
     const bodyAgitation = Math.min(
       1,
-      bodyVelocity.length() * 0.45 + nestedVelocity.length() * 0.32,
+      bodyVelocity.length() * 0.42 +
+        nestedVelocity.length() * 0.3 +
+        (this.coreNested.enabled ? coreVelocity.length() * 0.18 : 0),
     );
 
-    const primaryInsideSource =
-      this.waterSurfaceForBody(bodyPosition) === this.sourceWaterSurfaceY;
-    const nestedInsideSource =
-      this.nestedVessel.enabled &&
-      this.waterSurfaceForBody(nestedPosition) === this.sourceWaterSurfaceY;
+    const sourceCandidates: WaterDisturbanceCandidate[] = [];
+    const receiverCandidates: WaterDisturbanceCandidate[] = [];
 
-    const sourceDisturbancePosition = nestedInsideSource
-      ? nestedPosition
-      : bodyPosition;
-    const sourceDisturbanceVelocity = nestedInsideSource
-      ? nestedVelocity
-      : bodyVelocity;
+    const addCandidate = (
+      position: Vector3,
+      velocity: Vector3,
+      radiusScene: number,
+      enabled: boolean,
+    ): void => {
+      if (!enabled) return;
+      const candidate: WaterDisturbanceCandidate = {
+        x: position.x,
+        z: position.z,
+        velocityX: velocity.x,
+        velocityY: velocity.y,
+        velocityZ: velocity.z,
+        radiusScene,
+      };
+      if (this.isInsideSourceCup(position)) {
+        sourceCandidates.push(candidate);
+      } else {
+        receiverCandidates.push(candidate);
+      }
+    };
+
+    addCandidate(bodyPosition, bodyVelocity, INNER_RADIUS_SCENE, true);
+    addCandidate(
+      nestedPosition,
+      nestedVelocity,
+      0.48,
+      this.nestedVessel.enabled,
+    );
+    addCandidate(
+      corePosition,
+      coreVelocity,
+      this.coreNested.radiusScene,
+      this.coreNested.enabled,
+    );
+
+    const sourceDisturbance =
+      pickDominantWaterDisturbance(sourceCandidates);
+    const receiverDisturbance =
+      pickDominantWaterDisturbance(receiverCandidates);
+
+    const sourceDisturbancePosition = sourceDisturbance
+      ? new Vector3(sourceDisturbance.x, 0, sourceDisturbance.z)
+      : hostPosition;
+    const sourceDisturbanceVelocity = sourceDisturbance
+      ? new Vector3(
+          sourceDisturbance.velocityX,
+          sourceDisturbance.velocityY,
+          sourceDisturbance.velocityZ,
+        )
+      : Vector3.Zero();
 
     this.upperWaterSurface.update({
       surfaceY: this.sourceWaterSurfaceY,
@@ -1042,8 +1092,8 @@ export class Game {
         1,
         0.18 + this.vessel.inletM3PerSecond * 2100 + this.lastOutflowM3 * 2400,
       ),
-      velocityX: primaryInsideSource ? bodyVelocity.x : 0,
-      velocityZ: primaryInsideSource ? bodyVelocity.z : 0,
+      velocityX: sourceDisturbanceVelocity.x,
+      velocityZ: sourceDisturbanceVelocity.z,
       inlet01: Math.min(1, this.vessel.inletM3PerSecond * 3600),
       disturbanceX:
         (this.inletImpactWorld.x - hostPosition.x) * 0.8 +
@@ -1051,21 +1101,28 @@ export class Game {
       disturbanceZ:
         (this.inletImpactWorld.z - hostPosition.z) * 0.8 +
         (sourceDisturbancePosition.z - hostPosition.z) * 0.2,
-      disturbance01:
-        primaryInsideSource || nestedInsideSource
-          ? Math.min(1, sourceDisturbanceVelocity.length() * 0.75)
-          : 0,
+      disturbance01: sourceDisturbance
+        ? Math.min(
+            1,
+            sourceDisturbanceVelocity.length() *
+              (0.55 + sourceDisturbance.radiusScene * 0.4),
+          )
+        : 0,
       cameraPosition: this.camera.position,
       timeSeconds: this.runtime.elapsedSeconds,
       dtSeconds: dt,
     });
 
-    const receiverBodyPosition = primaryInsideSource
-      ? nestedPosition
-      : bodyPosition;
-    const receiverBodyVelocity = primaryInsideSource
-      ? nestedVelocity
-      : bodyVelocity;
+    const receiverBodyPosition = receiverDisturbance
+      ? new Vector3(receiverDisturbance.x, 0, receiverDisturbance.z)
+      : Vector3.Zero();
+    const receiverBodyVelocity = receiverDisturbance
+      ? new Vector3(
+          receiverDisturbance.velocityX,
+          receiverDisturbance.velocityY,
+          receiverDisturbance.velocityZ,
+        )
+      : Vector3.Zero();
 
     this.receiverWaterSurface.update({
       surfaceY: RECEIVER_BASE_Y + lowerHeight,
@@ -1429,20 +1486,27 @@ export class Game {
   }
 
   private waterSurfaceForBody(position: Vector3): number {
-    if (!this.level.nestedAssembly) return this.receiverWaterSurfaceY;
+    return this.isInsideSourceCup(position)
+      ? this.sourceWaterSurfaceY
+      : this.receiverWaterSurfaceY;
+  }
 
-    const inverseWorld = Matrix.Invert(this.targetHost.computeWorldMatrix(true));
-    const localPosition = Vector3.TransformCoordinates(position, inverseWorld);
-    const stillInsideCup = isPointInsideOpenCupLocal(
+  private isInsideSourceCup(position: Vector3): boolean {
+    if (!this.level.nestedAssembly) return false;
+
+    const inverseWorld = Matrix.Invert(
+      this.targetHost.computeWorldMatrix(true),
+    );
+    const localPosition = Vector3.TransformCoordinates(
+      position,
+      inverseWorld,
+    );
+    return isPointInsideOpenCupLocal(
       localPosition,
       1.72,
       -0.86,
       0.86,
     );
-
-    return stillInsideCup
-      ? this.sourceWaterSurfaceY
-      : this.receiverWaterSurfaceY;
   }
 
   private get nestedVesselEscaped(): boolean {

@@ -449,3 +449,17 @@ The next Level 1 tuning pass removes two remaining prototype-style force shortcu
 - pure submersion-fraction helpers and regression tests were added to keep the drag transition bounded from 0..1.
 
 This keeps gravity/Havok authoritative while improving the causal chain: visible inlet -> impact force -> parent motion, and water contact -> hydrodynamic damping.
+
+
+## Multi-body water disturbance pass — 2026-09-30
+
+Water-surface interaction now considers all physically active nested bodies instead of choosing a hard-coded primary/nested fallback:
+
+- primary cup, nested cup and core flask are classified into source or receiver water using the same parent-cup containment logic as buoyancy;
+- each water body selects the dominant disturbance from body speed and effective radius;
+- the core flask can now drive visible surface motion when it is the strongest local disturbance;
+- receiver/source agitation includes all active body motion while still keeping only one localized ripple source per surface for performance;
+- source-cup containment is centralized in one helper so water ownership and rendering use the same decision path;
+- dominant-disturbance selection has deterministic unit coverage.
+
+This does not add CFD or extra wave geometry; it makes the existing analytical shader respond to more of the actual Havok motion already happening in the level.
