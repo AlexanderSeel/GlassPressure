@@ -411,3 +411,16 @@ Level 1 testability: after the nested vessel is drilled/lightened, a bounded out
 24. [x] Add first lightweight animated caustics projection whose intensity follows authoritative water fill.
 25. Replace development cubemaps with optimized local production skybox faces.
 26. Only after Level 1 visually/mechanically matches the original concept, resume broader tool/environment polish.
+
+
+## Dynamic parent validation pass — 2026-09-30
+
+Validated the first dynamic-parent implementation against the actual nested-vessel coupling path and corrected several follow-up issues:
+- water ownership for primary, nested and core bodies is now evaluated in the parent cup's local space, so parent translation/tilt no longer makes a body incorrectly switch between source and receiver water;
+- nested escape detection uses the same cup-local frame instead of world-axis bounds;
+- the source surface remains world-level while its center follows the moving parent cup, avoiding the visually/physically incorrect effect of water rotating rigidly with tilted glass;
+- source-hole outflow now applies a bounded reaction force at the drilled opening when the parent cup is dynamic, allowing drilling/flow to create readable vessel motion and torque;
+- the third nested core now receives the same waterline/splash/bubble boundary feedback as the other dynamic bodies;
+- cup-local region behavior has dedicated regression tests.
+
+Next validation target: tune parent restoring/buoyancy damping and nested/core force scales from actual browser play, then refine surface shading/wake intensity without increasing geometric wave height.

@@ -10,6 +10,8 @@ import {
 
 export type WaterSurfaceUpdate = {
   surfaceY: number;
+  surfaceX?: number;
+  surfaceZ?: number;
   fill01: number;
   agitation01: number;
   velocityX?: number;
@@ -65,7 +67,11 @@ export class WaterSurfaceVisual {
     const velocityX = state.velocityX ?? 0;
     const velocityZ = state.velocityZ ?? 0;
 
-    this.mesh.position.y = state.surfaceY;
+    this.mesh.position.copyFromFloats(
+      state.surfaceX ?? this.mesh.position.x,
+      state.surfaceY,
+      state.surfaceZ ?? this.mesh.position.z,
+    );
     this.mesh.visibility = fill <= 0.001 ? 0 : 0.92;
 
     this.updateSloshTilt(velocityX, velocityZ, agitation, dt);

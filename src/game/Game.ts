@@ -4,6 +4,7 @@ import {
   Color3,
   Engine,
   HavokPlugin,
+  Matrix,
   Mesh,
   MeshBuilder,
   PBRMaterial,
@@ -20,6 +21,7 @@ import { buoyancyForceNewtons, submergedCylinderVolume } from "./simulation/Buoy
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
+import { isPointInsideOpenCupLocal, hasEscapedOpenCupLocal } from "./simulation/OpenCupRegion";
 import { CoreNestedRuntime } from "./simulation/CoreNestedRuntime";
 import {
   receiverSurfaceWorldY,
@@ -257,7 +259,7 @@ export class Game {
       "upper-water-surface",
       1.82,
       upperSurfaceMaterial,
-      upper,
+      null,
       64,
       0.045,
     );
@@ -874,6 +876,12 @@ export class Game {
 
       if (target.definition.effect === "nested-drain") {
         this.nestedVessel.applyJetReaction(direction, outflowM3);
+      } else if (this.parentCupUsesDynamicPhysics) {
+        const forceMagnitude = Math.min(1.6, outflowM3 * 420000);
+        this.sourceCupBody.body.applyForce(
+          direction.scale(-forceMagnitude),
+          origin,
+        );
       }
     }
   }
@@ -989,7 +997,9 @@ export class Game {
       : bodyVelocity;
 
     this.upperWaterSurface.update({
-      surfaceY: sourceSurfaceLocalY(upperFill),
+      surfaceY: this.sourceWaterSurfaceY,
+      surfaceX: hostPosition.x,
+      surfaceZ: hostPosition.z,
       fill01: upperFill,
       agitation01: Math.min(
         1,
@@ -1064,6 +1074,18 @@ export class Game {
       );
     } else {
       this.nestedWaterContact.reset();
+    }
+
+    if (this.coreNested.enabled) {
+      const corePosition = this.coreNested.position;
+      this.coreWaterContact.update(
+        dt,
+        corePosition,
+        this.coreNested.linearVelocity,
+        this.waterSurfaceForBody(corePosition),
+      );
+    } else {
+      this.coreWaterContact.reset();
     }
   }
 
@@ -1372,14 +1394,14 @@ export class Game {
   private waterSurfaceForBody(position: Vector3): number {
     if (!this.level.nestedAssembly) return this.receiverWaterSurfaceY;
 
-    const host = this.targetHost.getAbsolutePosition();
-    const radial = Math.hypot(position.x - host.x, position.z - host.z);
-    const bottomY = host.y - 0.86;
-    const rimY = host.y + 0.86;
-    const stillInsideCup =
-      radial < 1.62 &&
-      position.y < rimY + 0.62 &&
-      position.y > bottomY - 0.3;
+    const inverseWorld = Matrix.Invert(this.targetHost.computeWorldMatrix(true));
+    const localPosition = Vector3.TransformCoordinates(position, inverseWorld);
+    const stillInsideCup = isPointInsideOpenCupLocal(
+      localPosition,
+      1.72,
+      -0.86,
+      0.86,
+    );
 
     return stillInsideCup
       ? this.sourceWaterSurfaceY
@@ -1391,11 +1413,12 @@ export class Game {
       return false;
     }
 
-    const host = this.targetHost.getAbsolutePosition();
-    const position = this.nestedVessel.position;
-    const radial = Math.hypot(position.x - host.x, position.z - host.z);
-    const bottomY = host.y - 0.86;
-    return radial > 2.0 || position.y < bottomY - 0.35;
+    const inverseWorld = Matrix.Invert(this.targetHost.computeWorldMatrix(true));
+    const localPosition = Vector3.TransformCoordinates(
+      this.nestedVessel.position,
+      inverseWorld,
+    );
+    return hasEscapedOpenCupLocal(localPosition, 2.0, -0.86);
   }
 
   private get parentCupUsesDynamicPhysics(): boolean {
