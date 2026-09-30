@@ -67,6 +67,8 @@ export function createWaterSurfaceMaterial(
     varying vec3 vWorldPosition;
     varying vec3 vWorldNormal;
     varying float vWaveHeight;
+    varying float vWaveSlope;
+    varying float vWaveSlope;
 
     vec2 waveTerm(
       vec2 p,
@@ -147,6 +149,7 @@ export function createWaterSurfaceMaterial(
       vWorldPosition = worldPosition.xyz;
       vWorldNormal = normalize(mat3(world) * localNormal);
       vWaveHeight = height;
+      vWaveSlope = length(gradient) * verticalScale;
 
       gl_Position = worldViewProjection * vec4(displaced, 1.0);
     }
@@ -179,6 +182,7 @@ export function createWaterSurfaceMaterial(
       );
 
       float waveShade = clamp(vWaveHeight * 0.18 + 0.5, 0.0, 1.0);
+      float crest = smoothstep(0.015, 0.085, vWaveSlope);
 
       vec3 refracted = refract(
         -viewDir,
@@ -192,7 +196,7 @@ export function createWaterSurfaceMaterial(
 
       float grazing = 1.0 - viewDot;
       float absorption = clamp(
-        0.2 + grazing * 0.52 + agitation * 0.08,
+        0.2 + grazing * 0.52 + agitation * 0.08 - crest * 0.05,
         0.0,
         0.82
       );
@@ -232,13 +236,15 @@ export function createWaterSurfaceMaterial(
         reflectionTint,
         clamp(fresnel * 0.9, 0.0, 0.94)
       );
-      color += reflectionTint * movingBand * (0.025 + agitation * 0.025);
-      color += vec3(specular * (0.24 + agitation * 0.1));
+      color += reflectionTint * movingBand * (0.018 + agitation * 0.02);
+      color += reflectionTint * crest * (0.035 + agitation * 0.025);
+      color += vec3(specular * (0.22 + agitation * 0.1 + crest * 0.08));
 
       float alpha =
         0.16 +
         fresnel * 0.38 +
         absorption * 0.08 +
+        crest * 0.055 +
         specular * 0.05;
 
       gl_FragColor = vec4(

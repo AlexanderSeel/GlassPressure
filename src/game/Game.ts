@@ -17,7 +17,11 @@ import {
 import { LEVELS, type LevelDefinition } from "./level/LevelDefinition";
 import { LevelRuntime } from "./level/LevelRuntime";
 import { effectiveTargetPressurePa, targetProgressMultiplier } from "./level/TargetStrategy";
-import { buoyancyForceNewtons, submergedCylinderVolume } from "./simulation/Buoyancy";
+import {
+  buoyancyForceNewtons,
+  effectiveContainedLiquidWeightNewtons,
+  submergedCylinderVolume,
+} from "./simulation/Buoyancy";
 import { FixedStepRunner } from "./simulation/FixedStepRunner";
 import { FluidSystem, type FluidCompartment } from "./simulation/FluidSystem";
 import { NestedVesselRuntime } from "./simulation/NestedVesselRuntime";
@@ -248,7 +252,7 @@ export class Game {
       },
       this.scene,
     );
-    this.upperWaterMesh.parent = upper;
+    this.upperWaterMesh.parent = null;
     this.upperWaterMesh.position.y = -0.25;
     this.upperWaterMesh.material = water;
     this.upperWaterMesh.isPickable = false;
@@ -751,6 +755,11 @@ export class Game {
     const buoyancy = buoyancyForceNewtons(1000, displacedVolume);
 
     const fill = this.fluid.getFillRatio(this.vessel);
+    const containedWaterLoadN = effectiveContainedLiquidWeightNewtons(
+      this.vessel.volumeM3,
+      this.vessel.densityKgM3,
+      0.16,
+    );
     const inletPush = new Vector3(
       Math.sin(this.runtime.elapsedSeconds * 1.4) * 0.22,
       -0.18 - fill * 0.16,
@@ -760,7 +769,7 @@ export class Game {
     this.sourceCupBody.body.applyForce(
       spring
         .add(drag)
-        .add(new Vector3(0, Math.min(26, buoyancy), 0))
+        .add(new Vector3(0, Math.min(26, buoyancy) - containedWaterLoadN, 0))
         .add(inletPush),
       position,
     );
@@ -964,8 +973,12 @@ export class Game {
     const upperFill = this.fluid.getFillRatio(this.vessel);
     const upperHeight = sourceWaterHeightScene(upperFill);
     this.upperWaterMesh.scaling.y = upperHeight;
-    this.upperWaterMesh.position.y =
-      sourceSurfaceLocalY(upperFill) - upperHeight * 0.5;
+    const hostPosition = this.targetHost.getAbsolutePosition();
+    this.upperWaterMesh.position.copyFromFloats(
+      hostPosition.x,
+      this.sourceWaterSurfaceY - upperHeight * 0.5,
+      hostPosition.z,
+    );
 
     const lowerHeight = receiverWaterHeightScene(this.receiverFill);
     this.receiverWaterMesh.scaling.y = lowerHeight;
@@ -982,7 +995,6 @@ export class Game {
       bodyVelocity.length() * 0.45 + nestedVelocity.length() * 0.32,
     );
 
-    const hostPosition = this.targetHost.getAbsolutePosition();
     const primaryInsideSource =
       this.waterSurfaceForBody(bodyPosition) === this.sourceWaterSurfaceY;
     const nestedInsideSource =

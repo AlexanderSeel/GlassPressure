@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buoyancyForceNewtons, sphereVolume, submergedSphereVolume } from "./Buoyancy";
+import { buoyancyForceNewtons, sphereVolume, submergedSphereVolume   effectiveContainedLiquidWeightNewtons,
+} from "./Buoyancy";
 
 describe("Buoyancy", () => {
   it("returns zero volume when the sphere is dry", () => {
@@ -18,5 +19,14 @@ describe("Buoyancy", () => {
 
   it("converts displaced water to upward force", () => {
     expect(buoyancyForceNewtons(1000, 0.001)).toBeCloseTo(9.81, 8);
+  });
+});
+
+
+describe("effectiveContainedLiquidWeightNewtons", () => {
+  it("scales contained liquid load without exceeding the requested coupling", () => {
+    expect(effectiveContainedLiquidWeightNewtons(0.012, 1000, 0.16)).toBeCloseTo(18.8352, 4);
+    expect(effectiveContainedLiquidWeightNewtons(0.012, 1000, 2)).toBeCloseTo(117.72, 4);
+    expect(effectiveContainedLiquidWeightNewtons(-1, 1000, 0.5)).toBe(0);
   });
 });

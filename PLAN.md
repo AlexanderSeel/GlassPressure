@@ -424,3 +424,14 @@ Validated the first dynamic-parent implementation against the actual nested-vess
 - cup-local region behavior has dedicated regression tests.
 
 Next validation target: tune parent restoring/buoyancy damping and nested/core force scales from actual browser play, then refine surface shading/wake intensity without increasing geometric wave height.
+
+
+## Parent mass + water readability tuning — 2026-09-30
+
+Follow-up tuning after the cup-local coupling fix:
+- the low-opacity source water volume is now world-level and follows parent translation without inheriting parent rotation, matching the already-corrected free surface;
+- changing source volume now contributes a deliberately bounded effective contained-water load to the dynamic parent cup, so filling/draining visibly changes parent motion without making Level 1 unsolvable;
+- water shading now derives an additional crest/slope cue from the existing analytical wave derivatives, strengthening reflection/specular/opacity where the actual shader normal is changing instead of increasing geometric wave amplitude;
+- no new fake normal/noise architecture was introduced and the existing reflection/refraction path remains intact.
+
+The 0.16 parent liquid-load coupling is intentionally a gameplay coupling rather than full 1:1 liquid mass. Full source capacity represents about 12 kg of water while the current spring-supported prototype parent body is only 1.4 kg; applying all of that directly would overwhelm the current Level 1 support model before the surrounding receiver can provide compensating buoyancy.

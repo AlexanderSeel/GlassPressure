@@ -42,3 +42,16 @@ export function submergedCylinderVolume(
   );
   return Math.PI * r * r * submergedHeight;
 }
+
+
+export function effectiveContainedLiquidWeightNewtons(
+  volumeM3: number,
+  densityKgM3: number,
+  coupling01 = 1,
+  gravityMps2 = GRAVITY,
+): number {
+  const volume = Math.max(0, volumeM3);
+  const density = Math.max(0, densityKgM3);
+  const coupling = Math.min(1, Math.max(0, coupling01));
+  return volume * density * Math.max(0, gravityMps2) * coupling;
+}
